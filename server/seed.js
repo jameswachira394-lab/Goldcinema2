@@ -32,7 +32,7 @@ const movies = [
     category: "Anime",
     description: "A boy battles demons to save his sister and humanity.",
     poster: "https://m.media-amazon.com/images/M/MV5B...DemonSlayer.jpg",
-    duration: 24
+    duration: 624
   },
   {
     title: "Spider-Man: Across the Spider-Verse",
@@ -67,7 +67,7 @@ const movies = [
     category: "Anime",
     description: "A gentle, magical tale of two sisters and forest spirits.",
     poster: "https://m.media-amazon.com/images/M/Totoro.jpg",
-    duration: 86
+    duration: 286
   },
   {
     title: "Jujutsu Kaisen 0",
