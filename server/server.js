@@ -85,6 +85,12 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
+function handleError(err, res) {
+    console.error(err);
+    // Consider logging the error to a file or external service
+    res.status(500).json({ error: "Server error" });
+}
+
 app.post("/api/login", async (req, res) => {
   try {
     const { usernameOrEmail, password } = req.body;
@@ -101,8 +107,7 @@ app.post("/api/login", async (req, res) => {
     const token = jwt.sign(payload, SECRET, { expiresIn: "8h" });
     res.json({ token, user: payload });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+      handleError(err, res);
   }
 });
 
@@ -126,7 +131,7 @@ app.get("/api/movies", async (req, res) => {
     const rows = await all(`SELECT * FROM movies ORDER BY title`);
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    handleError(err, res);
   }
 });
 
@@ -136,7 +141,7 @@ app.get("/api/movies/:id", async (req, res) => {
     const row = await get(`SELECT * FROM movies WHERE id = ?`, [id]);
     res.json(row);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    handleError(err, res);
   }
 });
 
@@ -156,7 +161,7 @@ app.post("/api/bookings", authMiddleware, async (req, res) => {
     res.json({ success: true, bookingId: result.lastID });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    handleError(err, res);
   }
 });
 

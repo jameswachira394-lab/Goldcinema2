@@ -75,7 +75,7 @@ async function handleLogin(e) {
     if (currentUser.role === "admin") showAdmin();
     else showDashboard();
   } catch (err) {
-    console.error(err); alert("Network error");
+    console.error(err); alert("Network error during login");
   }
 }
 
@@ -92,7 +92,7 @@ async function fetchMovies() {
     const movies = await res.json();
     renderMovies(movies);
   } catch (err) {
-    console.error(err);
+    console.error(err); alert("Failed to load movies.");
   }
 }
 function renderMovies(movies) {
