@@ -1,12 +1,12 @@
 body {
   font-family: Arial, sans-serif;
   margin: 0;
-  background: #111;
+  background: #ec9191;
   color: #eee;
 }
 
 header {
-  background: #000;
+  background: #a4a919;
   padding: 1rem;
   text-align: center;
 }
@@ -19,6 +19,7 @@ h1 { color: gold; }
   justify-content: center;
   gap: 2rem;
   padding: 0;
+  background-color: transparent;
 }
 
 .navbar a {
@@ -37,13 +38,13 @@ h1 { color: gold; }
 
 .media-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1rem;
   padding: 2rem;
 }
 
 .card {
-  background: #222;
+  background: black;
   border-radius: 10px;
   padding: 1rem;
   text-align: center;
@@ -51,8 +52,8 @@ h1 { color: gold; }
 }
 
 .card img {
-  width: 100%;
-  height: 320px;
+  width: 80%;
+  height: 220px;
   object-fit: cover;
   border-radius: 8px;
 }
