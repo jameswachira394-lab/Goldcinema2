@@ -1,18 +1,20 @@
 const API_BASE = "http://localhost:4000/api";
 let token = localStorage.getItem("gc_token");
 let currentUser = JSON.parse(localStorage.getItem("gc_user"));
+let allMedia = { movies: [], concerts: [], plays: [] };
+let currentCategory = "movies";
 
 document.addEventListener("DOMContentLoaded", () => {
   if (token && currentUser) showDashboard();
   else showLogin();
-  fetchMovies();
+  fetchAllSections();
 });
 
 function scrollToSection(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
-/* UI toggles */
+/* UI TOGGLES */
 function showLogin() {
   document.getElementById("auth").style.display = "block";
   document.getElementById("login").style.display = "block";
@@ -20,10 +22,12 @@ function showLogin() {
   document.getElementById("dashboard").style.display = "none";
   document.getElementById("admin").style.display = "none";
 }
+
 function showRegister() {
   document.getElementById("login").style.display = "none";
   document.getElementById("register").style.display = "block";
 }
+
 function showDashboard() {
   document.getElementById("auth").style.display = "none";
   document.getElementById("dashboard").style.display = "block";
@@ -32,7 +36,15 @@ function showDashboard() {
   getMyBookings();
 }
 
-/* Auth */
+function logout() {
+  token = null;
+  currentUser = null;
+  localStorage.removeItem("gc_token");
+  localStorage.removeItem("gc_user");
+  showLogin();
+}
+
+/* AUTH */
 async function handleRegister(e) {
   e.preventDefault();
   const email = document.getElementById("reg-email").value.trim();
@@ -51,9 +63,7 @@ async function handleRegister(e) {
     if (!res.ok) return alert(j.error || "Registration failed");
     alert("Registered — please log in");
     showLogin();
-  } catch (err) {
-    console.error(err); alert("Network error");
-  }
+  } catch (err) { console.error(err); alert("Network error"); }
 }
 
 async function handleLogin(e) {
@@ -74,51 +84,83 @@ async function handleLogin(e) {
     localStorage.setItem("gc_user", JSON.stringify(currentUser));
     if (currentUser.role === "admin") showAdmin();
     else showDashboard();
-  } catch (err) {
-    console.error(err); alert("Network error during login");
-  }
+  } catch (err) { console.error(err); alert("Network error during login"); }
 }
 
-function logout() {
-  token = null; currentUser = null;
-  localStorage.removeItem("gc_token"); localStorage.removeItem("gc_user");
-  showLogin();
+/* FETCH CONTENT */
+async function fetchAllSections() {
+  await Promise.all([fetchMovies(), fetchConcerts(), fetchPlays()]);
 }
 
-/* Movies */
 async function fetchMovies() {
   try {
     const res = await fetch(`${API_BASE}/movies`);
-    const movies = await res.json();
-    renderMovies(movies);
-  } catch (err) {
-    console.error(err); alert("Failed to load movies.");
-  }
+    const data = await res.json();
+    allMedia.movies = data;
+    renderSection("movies", data, "Movie");
+  } catch (err) { console.error(err); }
 }
-function renderMovies(movies) {
-  const container = document.getElementById("movies");
-  container.innerHTML = movies.map(m => `
+
+async function fetchConcerts() {
+  try {
+    const res = await fetch(`${API_BASE}/concerts`);
+    const data = await res.json();
+    allMedia.concerts = data;
+    renderSection("concerts", data, "Concert");
+  } catch (err) { console.error(err); }
+}
+
+async function fetchPlays() {
+  try {
+    const res = await fetch(`${API_BASE}/plays`);
+    const data = await res.json();
+    allMedia.plays = data;
+    renderSection("plays", data, "Play");
+  } catch (err) { console.error(err); }
+}
+
+/* RENDER */
+function renderSection(containerId, items, type) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = items.map(i => `
     <div class="card">
-      <h4>${m.title}</h4>
-      <p><small>${m.category}</small></p>
-      <p>${m.description || ""}</p>
-      <p><small>Duration: ${m.duration || "—"} min</small></p>
-      <button onclick='bookPrompt(${m.id}, "${escapeJs(m.title)}")'>Book</button>
+      <img src="${i.poster_url || 'placeholder.jpg'}" alt="${i.title}" />
+      <h4>${i.title}</h4>
+      <p><small>${type}</small></p>
+      <p>${i.description || ""}</p>
+      <p><small>Duration: ${i.duration || "—"} min</small></p>
+      <button onclick='bookPrompt(${i.id}, "${escapeJs(i.title)}")'>Book</button>
     </div>
   `).join("");
 }
+
 function escapeJs(s) { return s.replace(/"/g, '\\"'); }
 
-/* Booking */
-async function bookPrompt(movieId, title) {
+/* FILTERING */
+function showCategory(category) {
+  currentCategory = category;
+  ["movies", "concerts", "plays"].forEach(s => {
+    document.getElementById(`${s}-section`).style.display = s === category ? "block" : "none";
+  });
+  filterMedia();
+}
+
+function filterMedia() {
+  const q = document.getElementById("searchInput").value.toLowerCase();
+  const list = allMedia[currentCategory].filter(i => i.title.toLowerCase().includes(q));
+  renderSection(currentCategory, list, currentCategory[0].toUpperCase() + currentCategory.slice(1));
+}
+
+/* BOOKINGS */
+async function bookPrompt(id, title) {
   if (!token) { alert("Please login to book"); showLogin(); return; }
-  const seats = prompt(`Enter seats to book for "${title}" (comma separated, e.g. A1,A2):`);
+  const seats = prompt(`Enter seats to book for "${title}" (comma separated):`);
   if (!seats) return;
   try {
     const res = await fetch(`${API_BASE}/bookings`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-      body: JSON.stringify({ movie_id: movieId, seats: seats.split(",").map(s => s.trim()) })
+      body: JSON.stringify({ movie_id: id, seats: seats.split(",").map(s => s.trim()) })
     });
     const j = await res.json();
     if (!res.ok) return alert(j.error || "Booking failed");
@@ -130,49 +172,54 @@ async function bookPrompt(movieId, title) {
 async function getMyBookings() {
   if (!token) return;
   try {
-    const res = await fetch(`${API_BASE}/my-bookings`, { headers: { Authorization: `Bearer ${token}` }});
+    const res = await fetch(`${API_BASE}/my-bookings`, { headers: { Authorization: `Bearer ${token}` } });
     const data = await res.json();
     const container = document.getElementById("myBookings");
-    container.innerHTML = data.map(b => `<p>${b.movie_title} — seats: ${b.seats.join(", ")} — ${new Date(b.created_at).toLocaleString()}</p>`).join("");
+    container.innerHTML = data.map(b =>
+      `<p>${b.movie_title} — seats: ${b.seats.join(", ")} — ${new Date(b.created_at).toLocaleString()}</p>`
+    ).join("");
     if (data[0]) renderTicket(data[0]);
   } catch (err) { console.error(err); }
 }
 
-/* Ticket rendering & download */
-function renderTicket(booking) {
+/* TICKET */
+function renderTicket(b) {
   const ticketArea = document.getElementById("ticketArea");
   ticketArea.innerHTML = `
     <div id="ticket">
       <h4>🎟 Gold Cinema Ticket</h4>
-      <p><b>Movie:</b> ${booking.movie_title}</p>
-      <p><b>Seats:</b> ${booking.seats.join(", ")}</p>
-      <p><b>When:</b> ${new Date(booking.created_at).toLocaleString()}</p>
+      <p><b>Movie:</b> ${b.movie_title}</p>
+      <p><b>Seats:</b> ${b.seats.join(", ")}</p>
+      <p><b>When:</b> ${new Date(b.created_at).toLocaleString()}</p>
       <p><b>Customer:</b> ${currentUser.username}</p>
     </div>
     <button onclick="downloadTicket()">Download PDF</button>
   `;
 }
+
 function downloadTicket() {
   const ticket = document.getElementById("ticket");
   if (!ticket) return;
   html2pdf().from(ticket).save("ticket.pdf");
 }
 
-/* Admin */
+/* ADMIN */
 async function showAdmin() {
   document.getElementById("auth").style.display = "none";
   document.getElementById("dashboard").style.display = "none";
   document.getElementById("admin").style.display = "block";
   document.getElementById("userDisplay").textContent = currentUser.username;
-  // fetch users and bookings
   try {
     const [usersRes, bookingsRes] = await Promise.all([
-      fetch(`${API_BASE}/admin/users`, { headers: { Authorization: `Bearer ${token}` }}),
-      fetch(`${API_BASE}/admin/bookings`, { headers: { Authorization: `Bearer ${token}` }})
+      fetch(`${API_BASE}/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${API_BASE}/admin/bookings`, { headers: { Authorization: `Bearer ${token}` } })
     ]);
     const users = await usersRes.json();
     const bookings = await bookingsRes.json();
-    document.getElementById("allCustomers").innerHTML = users.map(u => `<p>${u.username} (${u.email}) [${u.role}]</p>`).join("");
-    document.getElementById("allBookings").innerHTML = bookings.map(b => `<p>${b.movie_title} — ${b.username} (${b.email}) — seats:${b.seats.join(", ")} — ${new Date(b.created_at).toLocaleString()}</p>`).join("");
+    document.getElementById("allCustomers").innerHTML = users.map(u =>
+      `<p>${u.username} (${u.email}) [${u.role}]</p>`).join("");
+    document.getElementById("allBookings").innerHTML = bookings.map(b =>
+      `<p>${b.movie_title} — ${b.username} (${b.email}) — seats:${b.seats.join(", ")} — ${new Date(b.created_at).toLocaleString()}</p>`
+    ).join("");
   } catch (err) { console.error(err); alert("Failed to load admin data"); }
 }

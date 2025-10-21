@@ -13,7 +13,8 @@
     <nav class="navbar">
       <ul>
         <li><a href="#now-showing" onclick="scrollToSection('now-showing')">Now Showing</a></li>
-        <li><a href="#coming-soon" onclick="scrollToSection('coming-soon')">Coming Soon</a></li>
+        <li><a href="#concerts-section" onclick="scrollToSection('concerts-section')">Concerts</a></li>
+        <li><a href="#plays-section" onclick="scrollToSection('plays-section')">Plays</a></li>
         <li><a href="#" onclick="showLogin();return false;">Login</a></li>
         <li><a href="#" onclick="showRegister();return false;">Register</a></li>
       </ul>
@@ -23,9 +24,10 @@
   <main>
     <section class="hero">
       <h2>Welcome to Gold Cinema</h2>
-      <p>Your premier destination for the latest movies and anime.</p>
+      <p>Your premier destination for the latest movies, concerts, and plays.</p>
     </section>
 
+    <!-- AUTH -->
     <div id="auth">
       <div id="login" class="auth-form">
         <h2>Login</h2>
@@ -51,12 +53,30 @@
       </div>
     </div>
 
+    <!-- DASHBOARD -->
     <section id="dashboard" style="display:none;">
       <h2>Welcome, <span id="userDisplay"></span></h2>
 
-      <section id="now-showing">
-        <h3>Now Showing</h3>
-        <div id="movies" class="movies-grid"></div>
+      <div class="category-filters">
+        <button onclick="showCategory('movies')">Movies</button>
+        <button onclick="showCategory('concerts')">Concerts</button>
+        <button onclick="showCategory('plays')">Plays</button>
+        <input id="searchInput" type="text" placeholder="Search title..." oninput="filterMedia()" />
+      </div>
+
+      <section id="movies-section">
+        <h3>Movies</h3>
+        <div id="movies" class="media-grid"></div>
+      </section>
+
+      <section id="concerts-section" style="display:none;">
+        <h3>Concerts</h3>
+        <div id="concerts" class="media-grid"></div>
+      </section>
+
+      <section id="plays-section" style="display:none;">
+        <h3>Plays</h3>
+        <div id="plays" class="media-grid"></div>
       </section>
 
       <section id="bookings">
@@ -69,6 +89,7 @@
       <button onclick="logout()">Logout</button>
     </section>
 
+    <!-- ADMIN -->
     <section id="admin" style="display:none;">
       <h2>Admin Panel</h2>
       <h3>Users</h3>
@@ -80,7 +101,6 @@
   </main>
 
   <footer>&copy; 2025 Gold Cinema</footer>
-
   <script src="script.js"></script>
 </body>
 </html>
