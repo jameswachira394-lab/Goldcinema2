@@ -12,29 +12,92 @@
     <h1>Gold Cinema</h1>
     <nav class="navbar">
       <ul>
-        <li><a href="#now-showing" onclick="scrollToSection('now-showing')">Now Showing</a></li>
-        <li><a href="#concerts-section" onclick="scrollToSection('concerts-section')">Concerts</a></li>
-        <li><a href="#plays-section" onclick="scrollToSection('plays-section')">Plays</a></li>
+        <li><a href="#movies-section">Movies</a></li>
+        <li><a href="#concerts-section">Concerts</a></li>
+        <li><a href="#plays-section">Plays</a></li>
         <li><a href="#" onclick="showLogin();return false;">Login</a></li>
         <li><a href="#" onclick="showRegister();return false;">Register</a></li>
       </ul>
     </nav>
   </header>
 
+  <section class="hero">
+    <h2>Welcome to Gold Cinema</h2>
+    <p>Book tickets for the latest Movies, Concerts, and Plays all in one place.</p>
+  </section>
+
   <main>
-    <section class="hero">
-      <h2>Welcome to Gold Cinema</h2>
-      <p>Your premier destination for the latest movies, concerts, and plays.</p>
+    <!-- MOVIES -->
+    <section id="movies-section">
+      <h2>Now Showing</h2>
+      <div class="media-grid" id="movies">
+        <div class="card">
+          <img src="https://m.media-amazon.com/images/I/71niXI3lxlL._AC_UF1000,1000_QL80_.jpg" alt="Inception" />
+          <h4>Inception</h4>
+          <p>Genre: Sci-Fi | Duration: 148 min</p>
+          <button onclick="bookPrompt('Inception')">Book Now</button>
+        </div>
+        <div class="card">
+          <img src="https://upload.wikimedia.org/wikipedia/en/9/9a/Avengers_Age_of_Ultron_poster.jpg" alt="Avengers" />
+          <h4>Avengers: Age of Ultron</h4>
+          <p>Genre: Action | Duration: 141 min</p>
+          <button onclick="bookPrompt('Avengers: Age of Ultron')">Book Now</button>
+        </div>
+        <div class="card">
+          <img src="https://upload.wikimedia.org/wikipedia/en/a/a9/Interstellar_film_poster.jpg" alt="Interstellar" />
+          <h4>Interstellar</h4>
+          <p>Genre: Sci-Fi | Duration: 169 min</p>
+          <button onclick="bookPrompt('Interstellar')">Book Now</button>
+        </div>
+      </div>
     </section>
 
-    <!-- AUTH -->
+    <!-- CONCERTS -->
+    <section id="concerts-section">
+      <h2>Upcoming Concerts</h2>
+      <div class="media-grid" id="concerts">
+        <div class="card">
+          <img src="https://i.pinimg.com/originals/67/51/32/67513286d50d2e3de1f8a6b82e257948.jpg" alt="Coldplay" />
+          <h4>Coldplay World Tour</h4>
+          <p>Venue: London | Date: Dec 12, 2025</p>
+          <button onclick="bookPrompt('Coldplay World Tour')">Book Now</button>
+        </div>
+        <div class="card">
+          <img src="https://i.pinimg.com/originals/20/84/65/20846530374a27290573a7c91bcd0439.jpg" alt="BTS Concert" />
+          <h4>BTS Live in Tokyo</h4>
+          <p>Venue: Tokyo Dome | Date: Nov 30, 2025</p>
+          <button onclick="bookPrompt('BTS Live in Tokyo')">Book Now</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PLAYS -->
+    <section id="plays-section">
+      <h2>Featured Plays</h2>
+      <div class="media-grid" id="plays">
+        <div class="card">
+          <img src="https://upload.wikimedia.org/wikipedia/en/5/51/Hamilton-poster.jpg" alt="Hamilton" />
+          <h4>Hamilton</h4>
+          <p>Venue: Broadway | Duration: 160 min</p>
+          <button onclick="bookPrompt('Hamilton')">Book Now</button>
+        </div>
+        <div class="card">
+          <img src="https://upload.wikimedia.org/wikipedia/en/3/3a/The_Lion_King_poster.jpg" alt="Lion King" />
+          <h4>The Lion King</h4>
+          <p>Venue: Sydney Opera House | Duration: 120 min</p>
+          <button onclick="bookPrompt('The Lion King')">Book Now</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- AUTH FORMS -->
     <div id="auth">
-      <div id="login" class="auth-form">
+      <div id="login" class="auth-form" style="display:none;">
         <h2>Login</h2>
         <form onsubmit="handleLogin(event)">
-          <label for="login-username">Email / Username</label>
+          <label>Email / Username</label>
           <input id="login-username" required />
-          <label for="login-password">Password</label>
+          <label>Password</label>
           <input id="login-password" type="password" required />
           <button type="submit">Login</button>
           <p>Don't have an account? <a href="#" onclick="showRegister();return false;">Register</a></p>
@@ -52,55 +115,10 @@
         </form>
       </div>
     </div>
-
-    <!-- DASHBOARD -->
-    <section id="dashboard" style="display:none;">
-      <h2>Welcome, <span id="userDisplay"></span></h2>
-
-      <div class="category-filters">
-        <button onclick="showCategory('movies')">Movies</button>
-        <button onclick="showCategory('concerts')">Concerts</button>
-        <button onclick="showCategory('plays')">Plays</button>
-        <input id="searchInput" type="text" placeholder="Search title..." oninput="filterMedia()" />
-      </div>
-
-      <section id="movies-section">
-        <h3>Movies</h3>
-        <div id="movies" class="media-grid"></div>
-      </section>
-
-      <section id="concerts-section" style="display:none;">
-        <h3>Concerts</h3>
-        <div id="concerts" class="media-grid"></div>
-      </section>
-
-      <section id="plays-section" style="display:none;">
-        <h3>Plays</h3>
-        <div id="plays" class="media-grid"></div>
-      </section>
-
-      <section id="bookings">
-        <h3>My Bookings</h3>
-        <div id="myBookings"></div>
-        <h3>Latest Ticket</h3>
-        <div id="ticketArea"></div>
-      </section>
-
-      <button onclick="logout()">Logout</button>
-    </section>
-
-    <!-- ADMIN -->
-    <section id="admin" style="display:none;">
-      <h2>Admin Panel</h2>
-      <h3>Users</h3>
-      <div id="allCustomers"></div>
-      <h3>All Bookings</h3>
-      <div id="allBookings"></div>
-      <button onclick="logout()">Logout</button>
-    </section>
   </main>
 
   <footer>&copy; 2025 Gold Cinema</footer>
+
   <script src="script.js"></script>
 </body>
 </html>
