@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Select Seats | Gold Cinema</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #fafafa;
+      margin: 0;
+      text-align: center;
+    }
+    header {
+      background: #b58900;
+      color: white;
+      padding: 15px;
+    }
+    .screen {
+      background: black;
+      color: white;
+      margin: 20px auto;
+      width: 60%;
+      padding: 10px;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+    .seat-grid {
+      display: grid;
+      grid-template-columns: repeat(16, 35px);
+      gap: 6px;
+      justify-content: center;
+      margin: 20px auto;
+    }
+    .seat {
+      width: 35px;
+      height: 35px;
+      line-height: 35px;
+      background: #ccc;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .seat.selected {
+      background: #ffcc00;
+    }
+    .seat.booked {
+      background: #444;
+      cursor: not-allowed;
+    }
+    .seat:hover:not(.booked):not(.selected) {
+      background: #ddd;
+    }
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin: 10px 0;
+    }
+    .legend div {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend .box {
+      width: 20px;
+      height: 20px;
+      border-radius: 3px;
+    }
+    .cost-panel {
+      background: #eee;
+      padding: 15px;
+      width: 300px;
+      margin: 20px auto;
+      border-radius: 8px;
+    }
+    button {
+      background: #b58900;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #a57d00;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>Select Your Seats</h2>
+  </header>
+
+  <div class="screen">SCREEN</div>
+
+  <div class="legend">
+    <div><div class="box" style="background:#ccc"></div> Available</div>
+    <div><div class="box" style="background:#444"></div> Booked</div>
+    <div><div class="box" style="background:#ffcc00"></div> Selected</div>
+  </div>
+
+  <div id="seatContainer" class="seat-grid"></div>
+
+  <div class="cost-panel">
+    <h3>Total Cost: KSh <span id="totalCost">0</span></h3>
+    <button onclick="reserveSeats()">Reserve Seats</button>
+  </div>
+
+  <script>
+    const seatContainer = document.getElementById("seatContainer");
+    const totalCostEl = document.getElementById("totalCost");
+
+    const rows = "ABCDEFGHIJKLM".split("");
+    const cols = 16;
+    const basePrice = 800;
+    let selectedSeats = [];
+
+    // Example booked seats (will come from DB)
+    const bookedSeats = ["B5", "C6", "D7", "H10", "J3"];
+
+    // Render seats
+    rows.forEach(r => {
+      for (let c = 1; c <= cols; c++) {
+        const id = `${r}${c}`;
+        const div = document.createElement("div");
+        div.classList.add("seat");
+        div.textContent = id;
+        if (bookedSeats.includes(id)) div.classList.add("booked");
+        div.onclick = () => toggleSeat(div, id);
+        seatContainer.appendChild(div);
+      }
+    });
+
+    function toggleSeat(div, id) {
+      if (div.classList.contains("booked")) return;
+      if (div.classList.contains("selected")) {
+        div.classList.remove("selected");
+        selectedSeats = selectedSeats.filter(s => s !== id);
+      } else {
+        div.classList.add("selected");
+        selectedSeats.push(id);
+      }
+      updateCost();
+    }
+
+    function updateCost() {
+      totalCostEl.textContent = selectedSeats.length * basePrice;
+    }
+
+    function reserveSeats() {
+      if (selectedSeats.length === 0) {
+        alert("Select at least one seat.");
+        return;
+      }
+      const data = {
+        seats: selectedSeats,
+        total: selectedSeats.length * basePrice
+      };
+      console.log("Reserving seats:", data);
+
+      // Send to backend (example)
+      fetch("/api/bookSeats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      })
+        .then(res => res.json())
+        .then(res => {
+          alert("Reservation confirmed!");
+          window.location.href = "confirmation.html";
+        })
+        .catch(() => alert("Error booking seats."));
+    }
+  </script>
+</body>
+</html>
