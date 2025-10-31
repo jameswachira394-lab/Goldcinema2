@@ -152,6 +152,21 @@ app.post("/api/bookings", authMiddleware, async (req, res) => {
     const { movie_id, seats } = req.body;
     if (!movie_id || !seats) return res.status(400).json({ error: "Missing fields" });
 
+    // Server-side check for already booked seats to prevent double booking
+    const bookingsForMovie = await all(`SELECT seats FROM bookings WHERE movie_id = ?`, [movie_id]);
+    const allBookedSeats = bookingsForMovie.flatMap(b => {
+      try {
+        return JSON.parse(b.seats);
+      } catch (e) {
+        return [];
+      }
+    });
+
+    const alreadyBooked = seats.some(seat => allBookedSeats.includes(String(seat)) || allBookedSeats.includes(Number(seat)));
+    if (alreadyBooked) {
+      return res.status(409).json({ error: "One or more selected seats are already booked." });
+    }
+
     const created_at = new Date().toISOString();
     const result = await run(`INSERT INTO bookings (user_id, movie_id, seats, created_at) VALUES (?, ?, ?, ?)`, [
       req.user.id,
@@ -161,14 +176,13 @@ app.post("/api/bookings", authMiddleware, async (req, res) => {
     ]);
     res.json({ success: true, bookingId: result.lastID });
   } catch (err) {
-    console.error(err);
     handleError(err, res);
   }
 });
 
 app.get("/api/my-bookings", authMiddleware, async (req, res) => {
   try {
-    const book = await all(
+    const bookings = await all(
       `SELECT b.id, b.movie_id, m.title as movie_title, b.seats, b.created_at
        FROM bookings b
        LEFT JOIN movies m ON m.id = b.movie_id
@@ -177,12 +191,17 @@ app.get("/api/my-bookings", authMiddleware, async (req, res) => {
       [req.user.id]
     );
     // parse seats
-    book.forEach(b => {
-      try { b.seats = JSON.parse(b.seats); } catch(e){ b.seats = []; }
+    bookings.forEach(b => {
+      try {
+        b.seats = JSON.parse(b.seats);
+      } catch(e){
+        console.warn(`Could not parse seats for booking ${b.id}:`, b.seats);
+        b.seats = [];
+      }
     });
-    res.json(book);
+    res.json(bookings);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    handleError(err, res);
   }
 });
 

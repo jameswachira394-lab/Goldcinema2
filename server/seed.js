@@ -1,5 +1,6 @@
 // seed.js
 const sqlite3 = require("sqlite3").verbose();
+const bcrypt = require("bcrypt");
 const path = require("path");
 
 const DB_FILE = path.join(__dirname, "db.sqlite");
@@ -85,65 +86,50 @@ const movies = [
   }
 ];
 
-db.serialize(() => {
-  // Remove existing duplicate movies (keep the first occurrence) so creating a UNIQUE index succeeds
-  db.run(`DELETE FROM movies WHERE id NOT IN (SELECT MIN(id) FROM movies GROUP BY title)`, function (delErr) {
-    if (delErr) {
-      console.error('Error removing duplicate movies:', delErr);
-      // continue anyway
-    }
-
-    // Ensure movie titles are unique so we can safely use INSERT OR IGNORE
-    db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_movies_title ON movies(title)", function (idxErr) {
-      if (idxErr) {
-        console.error('Error creating unique index on movies.title:', idxErr);
-        // continue; INSERT OR IGNORE may still work without the index
-      }
-
-      const stmt = db.prepare("INSERT OR IGNORE INTO movies (title, category, description, poster, duration) VALUES (?, ?, ?, ?, ?)");
-      movies.forEach(m => {
-        // Provide a callback to handle potential constraint errors gracefully
-        stmt.run(m.title, m.category, m.description, m.poster, m.duration, function (runErr) {
-          if (runErr) {
-            // Log and continue (duplicates or other constraint issues)
-            console.warn('Could not insert movie', m.title, runErr && runErr.message);
-          }
-        });
-      });
-
-  // finalize only after all movie inserts queued
-  stmt.finalize((err) => {
+async function seedDatabase() {
+  const db = new sqlite3.Database(DB_FILE, (err) => {
     if (err) {
-      console.error('Error finalizing movie statement:', err);
-      db.close();
+      console.error('Error opening database', err.message);
       return;
     }
+    console.log('Connected to the SQLite database.');
+  });
 
+  // Use a Promise-based wrapper for db.run
+  const run = (sql, params = []) => new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+
+  try {
+    // Remove existing duplicate movies (keep the first occurrence) so creating a UNIQUE index succeeds
+    await run(`DELETE FROM movies WHERE id NOT IN (SELECT MIN(id) FROM movies GROUP BY title)`);
+    console.log("Removed duplicate movies.");
+
+    // Ensure movie titles are unique so we can safely use INSERT OR IGNORE
+    await run("CREATE UNIQUE INDEX IF NOT EXISTS idx_movies_title ON movies(title)");
+    console.log("Created unique index on movies.title.");
+
+    const stmt = db.prepare("INSERT OR IGNORE INTO movies (title, category, description, poster, duration) VALUES (?, ?, ?, ?, ?)");
+    for (const m of movies) {
+      await new Promise((resolve, reject) => {
+        stmt.run(m.title, m.category, m.description, m.poster, m.duration, (err) => err ? reject(err) : resolve());
+      });
+    }
+    stmt.finalize();
     console.log("✅ Movies & Anime inserted (duplicates ignored)!");
 
     // now create admin user (hash password first)
-    const bcrypt = require("bcrypt");
-    (async () => {
-      try {
-        const hashed = await bcrypt.hash("admin123", 10);
-        db.run(
-          "INSERT OR IGNORE INTO users (email, username, password, role) VALUES (?, ?, ?, ?)",
-          ["admin@goldcinema.com", "admin", hashed, "admin"],
-          function (err2) {
-            if (err2) {
-              console.error('Error inserting admin user:', err2);
-            } else {
-              console.log("✅ Admin user created (username: admin, password: admin123)");
-            }
-            db.close();
-          }
-        );
-      } catch (hashErr) {
-        console.error('Error hashing password:', hashErr);
-        db.close();
-      }
-    })();
-  });
-      });
-  });
-});
+    const hashed = await bcrypt.hash("admin123", 10);
+    await run("INSERT OR IGNORE INTO users (email, username, password, role) VALUES (?, ?, ?, ?)", ["admin@goldcinema.com", "admin", hashed, "admin"]);
+    console.log("✅ Admin user created (username: admin, password: admin123)");
+  } catch (err) {
+    console.error('Seeding failed:', err);
+  } finally {
+    db.close(() => console.log('Database connection closed.'));
+  }
+}
+
+seedDatabase();

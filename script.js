@@ -4,10 +4,29 @@ let currentUser = JSON.parse(localStorage.getItem("gc_user"));
 let allMedia = { movies: [], concerts: [], plays: [] };
 let currentCategory = "movies";
 
-document.addEventListener("DOMContentLoaded", () => {
-  if (token && currentUser) showDashboard();
-  else showLogin();
-  fetchAllSections();
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    // Verify token is still valid
+    if (token && currentUser) {
+      const res = await fetch(`${API_BASE}/verify-token`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        throw new Error('Token invalid');
+      }
+      showDashboard();
+    } else {
+      showLogin();
+    }
+    
+    // Initialize the page
+    await fetchAllSections();
+    setupEventListeners();
+  } catch (err) {
+    console.error('Initialization error:', err);
+    // Clear invalid token/user data
+    logout();
+  }
 });
 
 /* UI TOGGLES */
@@ -64,23 +83,50 @@ async function handleRegister(e) {
 
 async function handleLogin(e) {
   e.preventDefault();
+  const submitBtn = e.target.querySelector('button');
   const usernameOrEmail = document.getElementById("login-username").value.trim();
   const password = document.getElementById("login-password").value;
+
+  if (!usernameOrEmail || !password) {
+    showToast('Please fill in all fields', 'error');
+    return;
+  }
+
   try {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Logging in...';
+
     const res = await fetch(`${API_BASE}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ usernameOrEmail, password })
     });
     const j = await res.json();
-    if (!res.ok) return alert(j.error || "Login failed");
+    
+    if (!res.ok) {
+      showToast(j.error || "Login failed", 'error');
+      return;
+    }
+
     token = j.token;
     currentUser = j.user;
     localStorage.setItem("gc_token", token);
     localStorage.setItem("gc_user", JSON.stringify(currentUser));
-    if (currentUser.role === "admin") showAdmin();
-    else showDashboard();
-  } catch (err) { console.error(err); alert("Network error during login"); }
+    
+    showToast('Login successful!', 'success');
+    
+    if (currentUser.role === "admin") {
+      showAdmin();
+    } else {
+      showDashboard();
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Network error during login', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Login';
+  }
 }
 
 /* FETCH CONTENT */
@@ -120,7 +166,7 @@ function renderSection(containerId, items, type) {
   const container = document.getElementById(containerId);
   container.innerHTML = items.map(i => `
     <div class="card">
-      <img src="${i.poster_url || 'placeholder.jpg'}" alt="${i.title}" />
+      <img src="${i.poster || 'placeholder.jpg'}" alt="${i.title}" />
       <h4>${i.title}</h4>
       <p><small>${type}</small></p>
       <p>${i.description || ""}</p>
@@ -183,7 +229,12 @@ async function bookPrompt(id, title) {
         body: JSON.stringify({ phone, amount: selected.length * 500, movie_id: id, seats: selected })
       });
       const payData = await payRes.json();
-      if (!payRes.ok) return alert(payData.error || "Payment failed");
+      if (!payRes.ok) {
+        if (payRes.status === 409) {
+          return alert(payData.error || "Seats were booked by someone else. Please select different seats.");
+        }
+        return alert(payData.error || "Payment failed");
+      }
       alert("Check your phone for M-Pesa prompt and confirm payment.");
     } catch (err) { console.error(err); alert("M-Pesa payment failed."); }
 
@@ -230,6 +281,24 @@ function downloadTicket() {
   const ticket = document.getElementById("ticket");
   if (!ticket) return;
   html2pdf().from(ticket).save("ticket.pdf");
+}
+
+/* NOTIFICATIONS */
+function showToast(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  
+  document.body.appendChild(toast);
+  
+  // Trigger animation
+  setTimeout(() => toast.classList.add('show'), 10);
+  
+  // Remove after display
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 /* ADMIN */
