@@ -4,8 +4,6 @@
   <meta charset="utf-8" />
   <title>Gold Cinema</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <button onclick="window.location.href='seats.html'">Book Seats</button>
-
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
@@ -14,9 +12,9 @@
     <h1>Gold Cinema</h1>
     <nav class="navbar">
       <ul>
-        <li><a href="movies.html">Movies</a></li>
-        <li><a href="concerts.html">Concerts</a></li>
-        <li><a href="play.html">Plays</a></li>
+        <li><a href="#movies-section">Movies</a></li>
+        <li><a href="#concerts-section">Concerts</a></li>
+        <li><a href="#plays-section">Plays</a></li>
         <li><a href="#" onclick="showLogin();return false;">Login</a></li>
         <li><a href="#" onclick="showRegister();return false;">Register</a></li>
       </ul>
@@ -29,6 +27,57 @@
   </section>
 
   <main>
+    <!-- AUTH FORMS -->
+    <div id="auth" style="display:none;">
+      <!-- Login Form -->
+      <div id="login" class="auth-form">
+        <h2>Login</h2>
+        <form onsubmit="handleLogin(event)">
+          <label for="login-username">Email / Username</label>
+          <input id="login-username" required />
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" required />
+          <button type="submit">Login</button>
+          <p>Don't have an account? <a href="#" onclick="showRegister();return false;">Register</a></p>
+        </form>
+      </div>
+     
+      <!-- Register Form -->
+      <div id="register" class="auth-form" style="display:none;">
+        <h2>Register</h2>
+        <form onsubmit="handleRegister(event)">
+          <label for="reg-email">Email</label>
+          <input id="reg-email" type="email" required />
+          <label for="reg-username">Username</label>
+          <input id="reg-username" required />
+          <label for="reg-password">Password</label>
+          <input id="reg-password" type="password" required />
+          <label for="reg-confirm">Confirm Password</label>
+          <input id="reg-confirm" type="password" required />
+          <button type="submit">Register</button>
+          <p>Already have an account? <a href="#" onclick="showLogin();return false;">Login</a></p>
+        </form>
+      </div>
+
+      <!-- Dashboard -->
+      <div id="dashboard" style="display:none;">
+        <h2>Welcome, <span id="userDisplay"></span>!</h2>
+        <div id="myBookings"></div>
+        <div id="ticketArea"></div>
+        <button onclick="logout()">Logout</button>
+      </div>
+
+      <!-- Admin Panel -->
+      <div id="admin" style="display:none;">
+        <h2>Admin Dashboard</h2>
+        <h3>All Customers</h3>
+        <div id="allCustomers"></div>
+        <h3>All Bookings</h3>
+        <div id="allBookings"></div>
+        <button onclick="logout()">Logout</button>
+      </div>
+    </div>
+
     <!-- MOVIES -->
     <section id="movies-section">
       <h2>Now Showing</h2>
@@ -113,36 +162,10 @@
           <img src="https://www.vukuzenzele.gov.za/sites/default/files/images_2021_09_01/Theatre%20Plays.png" alt="I will Marry when i want" />
           <h4>I will Marry when i wan</h4>
           <p>Venue: Kenya Opera House | Duration: 120 min</p>
-          <button onclick="bookPrompt('I will Marry when i wan')">Book Now</button>
+          <button onclick="window.location.href='seats.html'">Book Now</button>
         </div>
       </div>
     </section>
-
-    <!-- AUTH FORMS -->
-    <div id="auth">
-      <div id="login" class="auth-form" style="display:none;">
-        <h2>Login</h2>
-        <form onsubmit="handleLogin(event)">
-          <label>Email / Username</label>
-          <input id="login-username" required />
-          <label>Password</label>
-          <input id="login-password" type="password" required />
-          <button type="submit">Login</button>
-          <p>Don't have an account? <a href="#" onclick="showRegister();return false;">Register</a></p>
-        </form>
-      </div>
-     
-      <div id="register" class="auth-form" style="display:none;">
-        <h2>Register</h2>
-        <form onsubmit="handleRegister(event)">
-          <label>Email</label><input id="reg-email" type="email" required />
-          <label>Username</label><input id="reg-username" required />
-          <label>Password</label><input id="reg-password" type="password" required />
-          <label>Confirm Password</label><input id="reg-confirm" type="password" required />
-          <button type="submit">Register</button>
-        </form>
-      </div>
-    </div>
   </main>
 
   <footer>&copy; 2025 Gold Cinema
