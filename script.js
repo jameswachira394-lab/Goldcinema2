@@ -10,10 +10,6 @@ document.addEventListener("DOMContentLoaded", () => {
   fetchAllSections();
 });
 
-function scrollToSection(id) {
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-}
-
 /* UI TOGGLES */
 function showLogin() {
   document.getElementById("auth").style.display = "block";
@@ -136,39 +132,72 @@ function renderSection(containerId, items, type) {
 
 function escapeJs(s) { return s.replace(/"/g, '\\"'); }
 
-/* FILTERING */
-function showCategory(category) {
-  currentCategory = category;
-  ["movies", "concerts", "plays"].forEach(s => {
-    document.getElementById(`${s}-section`).style.display = s === category ? "block" : "none";
-  });
-  filterMedia();
-}
+/* BOOKINGS with seat selection + M-Pesa */
+async function bookPrompt(id, title) {
+  if (!token) { alert("Please login to book"); showLogin(); return; }
 
-function filterMedia() {
-  const q = document.getElementById("searchInput").value.toLowerCase();
-  const list = allMedia[currentCategory].filter(i => i.title.toLowerCase().includes(q));
-  renderSection(currentCategory, list, currentCategory[0].toUpperCase() + currentCategory.slice(1));
+  document.querySelector("main").style.display = "none";
+  const seatContainer = document.createElement("div");
+  seatContainer.id = "seat-selection";
+  seatContainer.innerHTML = `
+    <h2>Select Seats for ${title}</h2>
+    <div id="seat-grid" style="display:grid;grid-template-columns:repeat(8,40px);gap:8px;justify-content:center;margin:20px;">
+      ${Array.from({ length: 40 }, (_, i) => `<div class="seat" data-seat="${i+1}">${i+1}</div>`).join("")}
+    </div>
+    <input id="mpesaPhone" placeholder="Enter M-Pesa phone (2547...)" style="margin:10px; padding:5px;">
+    <button id="confirmSeats">Pay & Book</button>
+    <button id="cancelBooking">Cancel</button>
+  `;
+  document.body.appendChild(seatContainer);
+
+  const style = document.createElement("style");
+  style.innerHTML = `
+    .seat { width: 40px; height: 40px; background: #ccc; border-radius: 6px; display:flex;align-items:center;justify-content:center; cursor:pointer; }
+    .seat.selected { background: #4CAF50; color:white; }
+    .seat.booked { background: #555; color:white; cursor:not-allowed; }
+  `;
+  document.head.appendChild(style);
+
+  let bookedSeats = [];
+  try {
+    const res = await fetch(`${API_BASE}/booked-seats/${id}`);
+    if (res.ok) bookedSeats = await res.json();
+  } catch (err) { console.error(err); }
+
+  document.querySelectorAll(".seat").forEach(seat => {
+    const seatNum = seat.dataset.seat;
+    if (bookedSeats.includes(seatNum)) seat.classList.add("booked");
+    else seat.addEventListener("click", () => seat.classList.toggle("selected"));
+  });
+
+  document.getElementById("confirmSeats").onclick = async () => {
+    const selected = [...document.querySelectorAll(".seat.selected")].map(s => s.dataset.seat);
+    const phone = document.getElementById("mpesaPhone").value.trim();
+    if (selected.length === 0) return alert("Select at least one seat.");
+    if (!phone) return alert("Enter M-Pesa phone number.");
+
+    try {
+      const payRes = await fetch(`${API_BASE}/pay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ phone, amount: selected.length * 500, movie_id: id, seats: selected })
+      });
+      const payData = await payRes.json();
+      if (!payRes.ok) return alert(payData.error || "Payment failed");
+      alert("Check your phone for M-Pesa prompt and confirm payment.");
+    } catch (err) { console.error(err); alert("M-Pesa payment failed."); }
+
+    seatContainer.remove();
+    document.querySelector("main").style.display = "block";
+  };
+
+  document.getElementById("cancelBooking").onclick = () => {
+    seatContainer.remove();
+    document.querySelector("main").style.display = "block";
+  };
 }
 
 /* BOOKINGS */
-async function bookPrompt(id, title) {
-  if (!token) { alert("Please login to book"); showLogin(); return; }
-  const seats = prompt(`Enter seats to book for "${title}" (comma separated):`);
-  if (!seats) return;
-  try {
-    const res = await fetch(`${API_BASE}/bookings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-      body: JSON.stringify({ movie_id: id, seats: seats.split(",").map(s => s.trim()) })
-    });
-    const j = await res.json();
-    if (!res.ok) return alert(j.error || "Booking failed");
-    alert("Booking successful");
-    getMyBookings();
-  } catch (err) { console.error(err); alert("Network error"); }
-}
-
 async function getMyBookings() {
   if (!token) return;
   try {
@@ -182,7 +211,7 @@ async function getMyBookings() {
   } catch (err) { console.error(err); }
 }
 
-/* TICKET */
+/* TICKET PDF */
 function renderTicket(b) {
   const ticketArea = document.getElementById("ticketArea");
   ticketArea.innerHTML = `
@@ -223,3 +252,4 @@ async function showAdmin() {
     ).join("");
   } catch (err) { console.error(err); alert("Failed to load admin data"); }
 }
+// End of script.js
