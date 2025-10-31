@@ -1,237 +1,198 @@
-// Simple cinema API with SQLite, JWT auth, and bookings
-const express = require("express");
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const sqlite3 = require("sqlite3").verbose();
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const path = require("path");
+// Gold Cinema Frontend Logic
+const API_BASE = "http://localhost:4000/api";
+let TOKEN = localStorage.getItem("token") || "";
+let USER = JSON.parse(localStorage.getItem("user") || "null");
+let currentMovieId = null;
 
-const SECRET = process.env.JWT_SECRET || "goldcinema_secret_change_in_prod";
-const PORT = process.env.PORT || 4000;
-const DB_FILE = path.join(__dirname, "db.sqlite");
-
-const db = new sqlite3.Database(DB_FILE);
-
-
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
-
-// Create tables if missing
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE,
-    username TEXT UNIQUE,
-    password TEXT,
-    role TEXT DEFAULT 'user'
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS movies (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    category TEXT,
-    description TEXT,
-    poster TEXT,
-    duration INTEGER
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS bookings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    movie_id INTEGER,
-    seats TEXT,
-    created_at TEXT,
-    FOREIGN KEY(user_id) REFERENCES users(id),
-    FOREIGN KEY(movie_id) REFERENCES movies(id)
-  )`);
-});
-
-// Helper: run SQL returning a Promise
-function run(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve(this);
-    });
-  });
+// ------------------ AUTH ------------------
+function showLogin() {
+  document.getElementById("auth").style.display = "block";
+  document.getElementById("login").style.display = "block";
+  document.getElementById("register").style.display = "none";
 }
-function get(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
-  });
+function showRegister() {
+  document.getElementById("auth").style.display = "block";
+  document.getElementById("login").style.display = "none";
+  document.getElementById("register").style.display = "block";
 }
-function all(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
-  });
+function hideAuth() {
+  document.getElementById("auth").style.display = "none";
 }
+async function handleRegister(e) {
+  e.preventDefault();
+  const email = document.getElementById("reg-email").value.trim();
+  const username = document.getElementById("reg-username").value.trim();
+  const password = document.getElementById("reg-password").value;
+  const confirm = document.getElementById("reg-confirm").value;
+  if (password !== confirm) return alert("Passwords do not match");
+  const res = await fetch(`${API_BASE}/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, username, password }),
+  });
+  const data = await res.json();
+  if (res.ok) {
+    alert("Registered successfully");
+    showLogin();
+  } else alert(data.error || "Registration failed");
+}
+async function handleLogin(e) {
+  e.preventDefault();
+  const usernameOrEmail = document.getElementById("login-username").value.trim();
+  const password = document.getElementById("login-password").value;
+  const res = await fetch(`${API_BASE}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ usernameOrEmail, password }),
+  });
+  const data = await res.json();
+  if (res.ok) {
+    TOKEN = data.token;
+    USER = data.user;
+    localStorage.setItem("token", TOKEN);
+    localStorage.setItem("user", JSON.stringify(USER));
+    hideAuth();
+    updateNav();
+  } else alert(data.error || "Login failed");
+}
+function logout() {
+  localStorage.clear();
+  TOKEN = "";
+  USER = null;
+  updateNav();
+}
+function updateNav() {
+  const authLinks = document.querySelectorAll(".auth-hidden");
+  const userLinks = document.querySelectorAll(".user-hidden");
+  if (USER) {
+    authLinks.forEach(el => (el.style.display = "none"));
+    userLinks.forEach(el => (el.style.display = "block"));
+    document.getElementById("navUsername").textContent = USER.username;
+  } else {
+    authLinks.forEach(el => (el.style.display = "inline-block"));
+    userLinks.forEach(el => (el.style.display = "none"));
+  }
+}
+updateNav();
 
-// --- Auth ---
-app.post("/api/register", async (req, res) => {
-  try {
-    const { email, username, password } = req.body;
-    if (!email || !username || !password) return res.status(400).json({ error: "Missing fields" });
+// ------------------ BOOKING + SEATS ------------------
+const seatRows = 5;
+const seatCols = 8;
+let selectedSeats = [];
+let seatPrice = 0;
 
-    const hashed = await bcrypt.hash(password, 10);
-    await run(`INSERT INTO users (email, username, password) VALUES (?, ?, ?)`, [email, username, hashed]);
-    res.json({ success: true, message: "Registered" });
-  } catch (err) {
-    if (err.message && err.message.includes("UNIQUE constraint failed")) {
-      return res.status(400).json({ error: "Email or username already exists" });
+function bookPrompt(movieTitle) {
+  const main = document.querySelector("main");
+  main.style.display = "none";
+
+  const container = document.createElement("div");
+  container.className = "seat-container";
+  container.innerHTML = `
+    <h2>Select Your Seats for ${movieTitle}</h2>
+    <div class="seat-grid"></div>
+    <div class="seat-info">
+      <label>Seat Type:
+        <select id="seatType">
+          <option value="regular" data-price="1500">Regular - KES 1500</option>
+          <option value="vip" data-price="3000">VIP - KES 3000</option>
+          <option value="vvip" data-price="5000">VVIP - KES 5000</option>
+        </select>
+      </label>
+      <p id="selectedSeats">Selected: none</p>
+      <p id="totalPrice">Total: KES 0</p>
+      <label>M-Pesa Number:
+        <input id="phoneInput" placeholder="2547XXXXXXXX" pattern="254[0-9]{9}" required>
+      </label>
+      <br>
+      <button id="confirmSeats">Confirm & Pay</button>
+      <button id="cancelSeats">Cancel</button>
+    </div>
+  `;
+  document.body.appendChild(container);
+
+  const grid = container.querySelector(".seat-grid");
+  for (let r = 0; r < seatRows; r++) {
+    const row = document.createElement("div");
+    row.className = "seat-row";
+    for (let c = 0; c < seatCols; c++) {
+      const seat = document.createElement("div");
+      seat.className = "seat";
+      seat.textContent = `${String.fromCharCode(65 + r)}${c + 1}`;
+      seat.addEventListener("click", () => toggleSeat(seat));
+      row.appendChild(seat);
     }
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    grid.appendChild(row);
   }
-});
 
-function handleError(err, res) {
-    console.error(err);
-    // Consider logging the error to a file or external service
-    res.status(500).json({ error: "Server error" });
+  document.getElementById("seatType").addEventListener("change", updateTotal);
+  document.getElementById("confirmSeats").onclick = () => confirmSeats(movieTitle);
+  document.getElementById("cancelSeats").onclick = () => {
+    container.remove();
+    main.style.display = "block";
+  };
 }
 
-app.post("/api/login", async (req, res) => {
-  try {
-    const { usernameOrEmail, password } = req.body;
-    if (!usernameOrEmail || !password) return res.status(400).json({ error: "Missing fields" });
-
-    const user = await get(`SELECT * FROM users WHERE username = ? OR email = ?`, [usernameOrEmail, usernameOrEmail]);
-    if (!user) return res.status(401).json({ error: "Invalid credentials" });
-
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return res.status(401).json({ error: "Invalid credentials" });
-
-    // Create token payload (don't include password)
-    const payload = { id: user.id, username: user.username, role: user.role };
-    const token = jwt.sign(payload, SECRET, { expiresIn: "8h" });
-    res.json({ token, user: payload });
-  } catch (err) {
-      handleError(err, res);
+function toggleSeat(seat) {
+  const seatId = seat.textContent;
+  if (seat.classList.contains("selected")) {
+    seat.classList.remove("selected");
+    selectedSeats = selectedSeats.filter(s => s !== seatId);
+  } else {
+    seat.classList.add("selected");
+    selectedSeats.push(seatId);
   }
-});
-
-// Middleware: protect routes
-function authMiddleware(req, res, next) {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith("Bearer ")) return res.status(401).json({ error: "Missing token" });
-  const token = auth.split(" ")[1];
-  try {
-    const payload = jwt.verify(token, SECRET);
-    req.user = payload;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: "Invalid token" });
-  }
+  updateTotal();
 }
 
-// --- Movies ---
-app.get("/api/movies", async (req, res) => {
-  try {
-    const rows = await all(`SELECT * FROM movies ORDER BY title`);
-    res.json(rows);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
-
-app.get("/api/movies/:id", async (req, res) => {
-  try {
-    const id = req.params.id;
-    const row = await get(`SELECT * FROM movies WHERE id = ?`, [id]);
-    res.json(row);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
-
-// --- Bookings ---
-app.post("/api/bookings", authMiddleware, async (req, res) => {
-  try {
-    const { movie_id, seats } = req.body;
-    if (!movie_id || !seats) return res.status(400).json({ error: "Missing fields" });
-
-    // Server-side check for already booked seats to prevent double booking
-    const bookingsForMovie = await all(`SELECT seats FROM bookings WHERE movie_id = ?`, [movie_id]);
-    const allBookedSeats = bookingsForMovie.flatMap(b => {
-      try {
-        return JSON.parse(b.seats);
-      } catch (e) {
-        return [];
-      }
-    });
-
-    const alreadyBooked = seats.some(seat => allBookedSeats.includes(String(seat)) || allBookedSeats.includes(Number(seat)));
-    if (alreadyBooked) {
-      return res.status(409).json({ error: "One or more selected seats are already booked." });
-    }
-
-    const created_at = new Date().toISOString();
-    const result = await run(`INSERT INTO bookings (user_id, movie_id, seats, created_at) VALUES (?, ?, ?, ?)`, [
-      req.user.id,
-      movie_id,
-      JSON.stringify(seats),
-      created_at,
-    ]);
-    res.json({ success: true, bookingId: result.lastID });
-  } catch (err) {
-    handleError(err, res);
-  }
-});
-
-app.get("/api/my-bookings", authMiddleware, async (req, res) => {
-  try {
-    const bookings = await all(
-      `SELECT b.id, b.movie_id, m.title as movie_title, b.seats, b.created_at
-       FROM bookings b
-       LEFT JOIN movies m ON m.id = b.movie_id
-       WHERE b.user_id = ?
-       ORDER BY b.created_at DESC`,
-      [req.user.id]
-    );
-    // parse seats
-    bookings.forEach(b => {
-      try {
-        b.seats = JSON.parse(b.seats);
-      } catch(e){
-        console.warn(`Could not parse seats for booking ${b.id}:`, b.seats);
-        b.seats = [];
-      }
-    });
-    res.json(bookings);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
-
-// --- Admin endpoints ---
-function adminOnly(req, res, next) {
-  if (req.user && req.user.role === "admin") return next();
-  return res.status(403).json({ error: "Admin required" });
+function updateTotal() {
+  const seatTypeSelect = document.getElementById("seatType");
+  if (!seatTypeSelect) return;
+  seatPrice = parseInt(seatTypeSelect.selectedOptions[0].dataset.price, 10);
+  const total = selectedSeats.length * seatPrice;
+  document.getElementById("selectedSeats").textContent =
+    `Selected: ${selectedSeats.join(", ") || "none"}`;
+  document.getElementById("totalPrice").textContent = `Total: KES ${total}`;
 }
 
-app.get("/api/admin/users", authMiddleware, adminOnly, async (req, res) => {
-  const rows = await all(`SELECT id, email, username, role FROM users ORDER BY id DESC`);
-  res.json(rows);
-});
+// ------------------ PAYMENT ------------------
+async function confirmSeats(movieTitle) {
+  if (!USER) return alert("Please log in first.");
+  if (selectedSeats.length === 0) return alert("Select at least one seat.");
 
-app.get("/api/admin/bookings", authMiddleware, adminOnly, async (req, res) => {
-  const rows = await all(`
-    SELECT b.id, b.user_id, u.username, u.email, b.movie_id, m.title as movie_title, b.seats, b.created_at
-    FROM bookings b
-    LEFT JOIN users u ON u.id = b.user_id
-    LEFT JOIN movies m ON m.id = b.movie_id
-    ORDER BY b.created_at DESC
-  `);
-  rows.forEach(r => { try { r.seats = JSON.parse(r.seats); } catch(e){ r.seats = []; }});
-  res.json(rows);
-});
+  const phone = document.getElementById("phoneInput").value.trim();
+  if (!/^254\d{9}$/.test(phone)) return alert("Enter valid M-Pesa number (2547XXXXXXXX)");
 
-// Serve a minimal API-health endpoint
-app.get("/api/health", (req, res) => res.json({ ok: true }));
+  const total = selectedSeats.length * seatPrice;
+  const movie_id = 1; // Example, can be dynamic
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Gold Cinema API listening on http://localhost:${PORT}`);
-});
+  // Create booking first
+  const bookRes = await fetch(`${API_BASE}/bookings`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${TOKEN}`,
+    },
+    body: JSON.stringify({ movie_id, seats: selectedSeats }),
+  });
+  const bookData = await bookRes.json();
+  if (!bookRes.ok) return alert(bookData.error || "Booking failed");
+
+  const bookingId = bookData.bookingId;
+
+  // Trigger M-Pesa payment
+  const payRes = await fetch(`${API_BASE}/pay`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${TOKEN}`,
+    },
+    body: JSON.stringify({ phone, amount: total, movie_id, seats: selectedSeats, bookingId }),
+  });
+
+  const payData = await payRes.json();
+  if (payRes.ok) {
+    alert("M-Pesa prompt sent. Complete payment on your phone.");
+    document.querySelector(".seat-container").remove();
+    document.querySelector("main").style.display = "block";
+  } else alert(payData.error || "Payment initiation failed");
+}
