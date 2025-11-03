@@ -123,6 +123,11 @@ function selectShowtime(movie, time) {
 }
 
 function updateAuthStatus() {
+    try {
+        updateAuthUI();
+    } catch (error) {
+        console.error("Error updating auth status:", error);
+    }
     const authLinks = document.querySelectorAll('.auth-hidden');
     const userLinks = document.querySelectorAll('.user-hidden');
     const profileSection = document.getElementById('profileSection');
@@ -147,6 +152,12 @@ function updateAuthStatus() {
 }
 
 function setupPaymentListeners() {
+  try {
+      setupPaymentUIListeners();
+  } catch (error) {
+      console.error("Error setting up payment listeners:", error);
+      showToast("Error initializing payment form.", "error");
+  }
   // Seat category selection
   document.querySelectorAll('input[name="seatCategory"]').forEach(input => {
     input.addEventListener('change', updateTotal);
@@ -245,11 +256,16 @@ function logout() {
   localStorage.removeItem("gc_token");
   localStorage.removeItem("gc_user");
   showLogin();
+  updateAuthStatus();
 }
 
 /* AUTH */
 async function handleRegister(e) {
   e.preventDefault();
+  const submitBtn = e.target.querySelector('button');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Registering...';
+
   const email = document.getElementById("reg-email").value.trim();
   const username = document.getElementById("reg-username").value.trim();
   const password = document.getElementById("reg-password").value;
@@ -263,10 +279,18 @@ async function handleRegister(e) {
       body: JSON.stringify({ email, username, password })
     });
     const j = await res.json();
-    if (!res.ok) return alert(j.error || "Registration failed");
-    alert("Registered — please log in");
+    if (!res.ok) {
+        throw new Error(j.error || "Registration failed");
+    }
+    showToast("Registered — please log in", "success");
     showLogin();
-  } catch (err) { console.error(err); alert("Network error"); }
+  } catch (err) {
+    console.error(err);
+    showToast(err.message || "Network error during registration", "error");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Register';
+  }
 }
 
 async function handleLogin(e) {
@@ -458,17 +482,22 @@ function showBookingModal(title, category) {
 }
 
 function updateTotal() {
-    if (!currentBooking) return;
+    try {
+        if (!currentBooking) return;
     
-    const selectedCategory = document.querySelector('input[name="seatCategory"]:checked');
-    const quantity = parseInt(document.getElementById('quantity').value) || 0;
+        const selectedCategory = document.querySelector('input[name="seatCategory"]:checked');
+        const quantity = parseInt(document.getElementById('quantity').value) || 0;
     
-    if (selectedCategory && quantity > 0) {
-        const price = currentBooking.prices[selectedCategory.value];
-        const total = price * quantity;
-        document.getElementById('totalAmount').textContent = `KES ${total}`;
-    } else {
-        document.getElementById('totalAmount').textContent = 'KES 0';
+        if (selectedCategory && quantity > 0) {
+            const price = currentBooking.prices[selectedCategory.value];
+            const total = price * quantity;
+            document.getElementById('totalAmount').textContent = `KES ${total}`;
+        } else {
+            document.getElementById('totalAmount').textContent = 'KES 0';
+        }
+    } catch (error) {
+        console.error("Error updating total:", error);
+        showToast("Could not update total amount.", "error");
     }
 }
 
@@ -516,12 +545,13 @@ async function processPayment() {
         return;
     }
 
-      const selectedCategory = document.querySelector('input[name="seatCategory"]:checked');
+    const modal = document.getElementById('bookingModal');
+    const selectedCategory = document.querySelector('input[name="seatCategory"]:checked');
     const quantity = parseInt(document.getElementById('quantity').value);
     const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
 
   if (!selectedCategory) {
-    showToast("Please select a seating category", "error");
+    showToast("Please select a seating category.", "error");
     return;
   }
 
@@ -530,6 +560,9 @@ async function processPayment() {
     return;
   }
 
+  const eventId = modal.dataset.eventId;
+  const eventTitle = modal.dataset.eventTitle;
+  const eventType = modal.dataset.eventType;
   const prices = JSON.parse(modal.dataset.prices);
   const totalAmount = prices[selectedCategory.value] * quantity;
 
@@ -607,36 +640,41 @@ async function processPayment() {
 
 /* TICKET PDF */
 function downloadTicket(booking) {
-  const ticketHtml = `
-    <div id="ticket" style="padding: 20px; background: #1a1a1a; color: #fff; border-radius: 8px; max-width: 400px; margin: 0 auto;">
-      <h2 style="color: gold; text-align: center;">🎟 Gold Cinema Ticket</h2>
-      <div style="border: 1px solid gold; padding: 15px; border-radius: 4px;">
-        <p><b style="color: gold;">Event:</b> ${booking.eventTitle || booking.movie_title}</p>
-        <p><b style="color: gold;">Type:</b> ${booking.eventType || 'Movie'}</p>
-        <p><b style="color: gold;">Category:</b> ${booking.category || 'Regular'}</p>
-        ${booking.seats ? `<p><b style="color: gold;">Seats:</b> ${booking.seats.join(", ")}</p>` : ''}
-        ${booking.quantity ? `<p><b style="color: gold;">Tickets:</b> ${booking.quantity}</p>` : ''}
-        <p><b style="color: gold;">Amount:</b> KES ${booking.amount || (booking.seats ? booking.seats.length * 1500 : 0)}</p>
-        <p><b style="color: gold;">Date:</b> ${new Date(booking.created_at).toLocaleString()}</p>
-        <p><b style="color: gold;">Customer:</b> ${currentUser.username}</p>
-        <p style="text-align: center; margin-top: 20px; font-size: 0.8em;">
-          Thank you for choosing Gold Cinema!<br>
-          <span style="color: gold;">✨ Enjoy the show! ✨</span>
-        </p>
+  try {
+    const ticketHtml = `
+      <div id="ticket" style="padding: 20px; background: #1a1a1a; color: #fff; border-radius: 8px; max-width: 400px; margin: 0 auto;">
+        <h2 style="color: gold; text-align: center;">🎟 Gold Cinema Ticket</h2>
+        <div style="border: 1px solid gold; padding: 15px; border-radius: 4px;">
+          <p><b style="color: gold;">Event:</b> ${booking.eventTitle || booking.movie_title}</p>
+          <p><b style="color: gold;">Type:</b> ${booking.eventType || 'Movie'}</p>
+          <p><b style="color: gold;">Category:</b> ${booking.category || 'Regular'}</p>
+          ${booking.seats ? `<p><b style="color: gold;">Seats:</b> ${booking.seats.join(", ")}</p>` : ''}
+          ${booking.quantity ? `<p><b style="color: gold;">Tickets:</b> ${booking.quantity}</p>` : ''}
+          <p><b style="color: gold;">Amount:</b> KES ${booking.amount || (booking.seats ? booking.seats.length * 1500 : 0)}</p>
+          <p><b style="color: gold;">Date:</b> ${new Date(booking.created_at).toLocaleString()}</p>
+          <p><b style="color: gold;">Customer:</b> ${currentUser.username}</p>
+          <p style="text-align: center; margin-top: 20px; font-size: 0.8em;">
+            Thank you for choosing Gold Cinema!<br>
+            <span style="color: gold;">✨ Enjoy the show! ✨</span>
+          </p>
+        </div>
       </div>
-    </div>
-  `;
+    `;
 
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = ticketHtml;
-  document.body.appendChild(tempDiv);
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = ticketHtml;
+    document.body.appendChild(tempDiv);
 
-  html2pdf()
-    .from(tempDiv.firstChild)
-    .save(`gold-cinema-ticket-${Date.now()}.pdf`)
-    .then(() => {
-      document.body.removeChild(tempDiv);
-    });
+    html2pdf()
+      .from(tempDiv.firstChild)
+      .save(`gold-cinema-ticket-${Date.now()}.pdf`)
+      .then(() => {
+        document.body.removeChild(tempDiv);
+      });
+  } catch (error) {
+      console.error("Error generating ticket PDF:", error);
+      showToast("Could not download ticket.", "error");
+  }
 }
 
 /* NOTIFICATIONS */
@@ -681,7 +719,10 @@ async function showAdmin() {
     document.getElementById("allBookings").innerHTML = bookings.map(b =>
       `<p>${b.movie_title} — ${b.username} (${b.email}) — seats:${b.seats.join(", ")} — ${new Date(b.created_at).toLocaleString()}</p>`
     ).join("");
-  } catch (err) { console.error(err); alert("Failed to load admin data"); }
+  } catch (err) {
+      console.error(err);
+      showToast("Failed to load admin data", "error");
+  }
 }
 
 async function handleAddMedia(e) {
