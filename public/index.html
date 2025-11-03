@@ -4,285 +4,175 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gold Cinema - Movie Booking</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="assets/images/favicon.png">
-    
-    <!-- CSS Files -->
-    <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    
-    <!-- SEO Meta Tags -->
-    <meta name="description" content="Gold Cinema - The ultimate movie booking experience">
-    <meta name="keywords" content="movies, cinema, booking, tickets, entertainment">
-    
-    <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="Gold Cinema">
-    <meta property="og:description" content="Book your favorite movies at Gold Cinema">
-    <meta property="og:image" content="assets/images/og-image.jpg">
-    <meta property="og:url" content="https://goldcinema.com">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Header -->
     <header>
         <nav>
             <div class="logo">
-                <h1 class="cyber-text">Gold Cinema</h1>
+                <h1>Gold Cinema</h1>
             </div>
             <div class="nav-links">
-                <a href="#movies" class="active">Movies</a>
+                <a href="#movies">Movies</a>
                 <a href="#events">Events</a>
-                <a href="#food">Food & Drinks</a>
+                <a href="#food">Food & Beverages</a>
                 <a href="#about">About</a>
                 <a href="#contact">Contact</a>
-                <a href="#account" class="user-account">
-                    <i class="fas fa-user"></i>
-                    <span id="accountStatus">Sign In</span>
-                </a>
-            </div>
-            <div class="mobile-nav-toggle">
-                <i class="fas fa-bars"></i>
             </div>
         </nav>
     </header>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-content">
-            <h2 class="glitch" data-text="Experience Cinema">Experience Cinema</h2>
-            <p>Book your tickets for the latest movies and events</p>
-            <a href="#movies" class="cta-button">Browse Movies</a>
-        </div>
-        <div class="hero-overlay"></div>
-    </section>
+    <main>
+        <!-- Search and Filter Section -->
+        <section class="search-section">
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search movies, events...">
+                <select id="categoryFilter" class="filter-select">
+                    <option value="all">All Categories</option>
+                    <option value="movies">Movies</option>
+                    <option value="events">Events</option>
+                </select>
+                <select id="genreFilter" class="filter-select">
+                    <option value="all">All Genres</option>
+                    <option value="action">Action</option>
+                    <option value="comedy">Comedy</option>
+                    <option value="drama">Drama</option>
+                    <option value="horror">Horror</option>
+                    <option value="sci-fi">Sci-Fi</option>
+                </select>
+                <select id="dateFilter" class="filter-select">
+                    <option value="all">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="tomorrow">Tomorrow</option>
+                    <option value="this-week">This Week</option>
+                    <option value="next-week">Next Week</option>
+                </select>
+                <select id="priceFilter" class="filter-select">
+                    <option value="all">All Prices</option>
+                    <option value="under-10">Under $10</option>
+                    <option value="10-15">$10 - $15</option>
+                    <option value="15-20">$15 - $20</option>
+                    <option value="over-20">Over $20</option>
+                </select>
+                <button class="search-btn" onclick="performSearch()">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </section>
 
-    <!-- Search Section -->
-    <section class="search-section">
-        <div class="search-container">
-            <input type="text" id="searchInput" class="search-input" placeholder="Search movies, events...">
-            <select id="categoryFilter" class="filter-select">
-                <option value="all">All Categories</option>
-                <option value="movies">Movies</option>
-                <option value="events">Events</option>
-            </select>
-            <select id="genreFilter" class="filter-select">
-                <option value="all">All Genres</option>
-                <option value="action">Action</option>
-                <option value="comedy">Comedy</option>
-                <option value="drama">Drama</option>
-                <option value="horror">Horror</option>
-                <option value="sci-fi">Sci-Fi</option>
-            </select>
-            <select id="dateFilter" class="filter-select">
-                <option value="all">All Dates</option>
-                <option value="today">Today</option>
-                <option value="tomorrow">Tomorrow</option>
-                <option value="this-week">This Week</option>
-                <option value="next-week">Next Week</option>
-            </select>
-            <button class="search-btn" onclick="performSearch()">
-                <i class="fas fa-search"></i> Search
-            </button>
-        </div>
-    </section>
+        <!-- Movies Section -->
+        <section id="movies">
+            <h2>Now Showing</h2>
+            <div class="movie-grid">
+                <!-- Movie cards will be dynamically added here -->
+            </div>
+        </section>
 
-    <!-- Movies Section -->
-    <section id="movies" class="section">
-        <h2 class="section-title cyber-text">Now Showing</h2>
-        <div class="movie-grid" id="movieGrid">
-            <!-- Movies will be dynamically loaded here -->
-        </div>
-    </section>
+        <!-- Events Section -->
+        <section id="events">
+            <h2>Special Events</h2>
+            <div class="movie-grid">
+                <!-- Event cards will be dynamically added here -->
+            </div>
+        </section>
 
-    <!-- Events Section -->
-    <section id="events" class="section">
-        <h2 class="section-title cyber-text">Special Events</h2>
-        <div class="event-grid" id="eventGrid">
-            <!-- Events will be dynamically loaded here -->
-        </div>
-    </section>
+        <!-- Food & Beverages Section -->
+        <section id="food">
+            <h2>Food & Beverages</h2>
+            <div class="movie-grid">
+                <!-- Food cards will be dynamically added here -->
+            </div>
+        </section>
+    </main>
 
-    <!-- Food & Drinks Section -->
-    <section id="food" class="section">
-        <h2 class="section-title cyber-text">Food & Drinks</h2>
-        <div class="food-grid">
-            <!-- Food items will be dynamically loaded here -->
-        </div>
-    </section>
-
-    <!-- About Section -->
-    <section id="about" class="section">
-        <h2 class="section-title cyber-text">About Gold Cinema</h2>
-        <div class="about-content">
-            <div class="about-text">
-                <p>Experience the future of cinema at Gold Cinema. Our state-of-the-art facilities and cutting-edge technology provide the ultimate movie-watching experience.</p>
-                <div class="features-grid">
-                    <div class="feature">
-                        <i class="fas fa-film"></i>
-                        <h3>4K Projection</h3>
-                        <p>Crystal clear picture quality</p>
+    <!-- Movie Details Modal -->
+    <div id="movieDetailsModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeMovieDetails()">&times;</button>
+            <div class="movie-details">
+                <div class="movie-poster">
+                    <img id="modalMoviePoster" src="" alt="Movie Poster">
+                </div>
+                <div class="movie-info">
+                    <h2 id="modalMovieTitle"></h2>
+                    <div class="movie-meta">
+                        <span id="modalMovieYear"></span>
+                        <span id="modalMovieRating"></span>
+                        <span id="modalMovieDuration"></span>
                     </div>
-                    <div class="feature">
-                        <i class="fas fa-volume-up"></i>
-                        <h3>Dolby Atmos</h3>
-                        <p>Immersive sound experience</p>
+                    <div class="movie-synopsis" id="modalMovieSynopsis"></div>
+                    <div class="cast-section">
+                        <h3>Cast</h3>
+                        <div class="cast-grid" id="modalMovieCast"></div>
                     </div>
-                    <div class="feature">
-                        <i class="fas fa-couch"></i>
-                        <h3>Luxury Seating</h3>
-                        <p>Premium comfort chairs</p>
+                    <div class="showtimes">
+                        <h3>Showtimes</h3>
+                        <div class="time-slots">
+                            <!-- Time slots will be dynamically added here -->
+                        </div>
                     </div>
+                    <button class="book-btn" onclick="startBooking()">Book Now</button>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
-    <!-- Contact Section -->
-    <section id="contact" class="section">
-        <h2 class="section-title cyber-text">Contact Us</h2>
-        <div class="contact-content">
-            <div class="contact-form">
-                <form id="contactForm" onsubmit="handleContactSubmit(event)">
-                    <div class="form-group">
-                        <input type="text" id="name" name="name" placeholder="Your Name" required>
-                    </div>
-                    <div class="form-group">
-                        <input type="email" id="email" name="email" placeholder="Your Email" required>
-                    </div>
-                    <div class="form-group">
-                        <textarea id="message" name="message" placeholder="Your Message" required></textarea>
-                    </div>
-                    <button type="submit" class="submit-btn">Send Message</button>
-                </form>
-            </div>
-            <div class="contact-info">
-                <div class="info-item">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <p>123 Cinema Street, Movie City, MC 12345</p>
+    <!-- Trailer Modal -->
+    <div id="trailerModal" class="trailer-modal">
+        <button class="close-btn" onclick="closeTrailer()">&times;</button>
+        <div class="trailer-content" id="trailerPlayer"></div>
+    </div>
+
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeBooking()">&times;</button>
+            <div class="booking-form">
+                <h2>Book Your Tickets</h2>
+                <div class="seat-selection">
+                    <!-- Seat map will be dynamically added here -->
                 </div>
-                <div class="info-item">
-                    <i class="fas fa-phone"></i>
-                    <p>+1 (555) 123-4567</p>
+                <div class="booking-summary">
+                    <!-- Booking summary will be dynamically added here -->
                 </div>
-                <div class="info-item">
-                    <i class="fas fa-envelope"></i>
-                    <p>info@goldcinema.com</p>
-                </div>
+                <button class="payment-btn" onclick="proceedToPayment()">Proceed to Payment</button>
             </div>
         </div>
-    </section>
+    </div>
 
-    <!-- Footer -->
     <footer>
         <div class="footer-content">
             <div class="footer-section">
-                <h3>Gold Cinema</h3>
+                <h3>About Gold Cinema</h3>
                 <p>Experience the magic of movies in ultimate comfort and style.</p>
-                <div class="social-links">
-                    <a href="#"><i class="fab fa-facebook"></i></a>
-                    <a href="#"><i class="fab fa-twitter"></i></a>
-                    <a href="#"><i class="fab fa-instagram"></i></a>
-                    <a href="#"><i class="fab fa-youtube"></i></a>
-                </div>
             </div>
             <div class="footer-section">
                 <h3>Quick Links</h3>
                 <ul>
                     <li><a href="#movies">Movies</a></li>
                     <li><a href="#events">Events</a></li>
-                    <li><a href="#food">Food & Drinks</a></li>
+                    <li><a href="#food">Food & Beverages</a></li>
                     <li><a href="#about">About</a></li>
                     <li><a href="#contact">Contact</a></li>
                 </ul>
             </div>
             <div class="footer-section">
-                <h3>Newsletter</h3>
-                <form id="newsletterForm" onsubmit="handleNewsletterSubmit(event)">
-                    <input type="email" placeholder="Enter your email">
-                    <button type="submit">Subscribe</button>
-                </form>
+                <h3>Contact Us</h3>
+                <p>Email: info@goldcinema.com</p>
+                <p>Phone: (555) 123-4567</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                </div>
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2025 Gold Cinema. All rights reserved.</p>
+            <p>&copy; 2023 Gold Cinema. All rights reserved.</p>
         </div>
     </footer>
 
-    <!-- Modals -->
-    <!-- Movie Details Modal -->
-    <div id="movieModal" class="modal">
-        <div class="modal-content">
-            <button class="close-btn" onclick="closeMovieModal()">&times;</button>
-            <div class="movie-details">
-                <!-- Movie details will be dynamically loaded here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Login Modal -->
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <button class="close-btn" onclick="closeLoginModal()">&times;</button>
-            <div class="auth-container">
-                <h2>Sign In</h2>
-                <form id="loginForm" onsubmit="handleLogin(event)">
-                    <div class="form-group">
-                        <input type="email" id="loginEmail" placeholder="Email" required>
-                    </div>
-                    <div class="form-group">
-                        <input type="password" id="loginPassword" placeholder="Password" required>
-                    </div>
-                    <button type="submit" class="auth-btn">Sign In</button>
-                </form>
-                <p class="auth-switch">Don't have an account? <a href="#" onclick="showRegisterForm()">Sign Up</a></p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Register Modal -->
-    <div id="registerModal" class="modal">
-        <div class="modal-content">
-            <button class="close-btn" onclick="closeRegisterModal()">&times;</button>
-            <div class="auth-container">
-                <h2>Create Account</h2>
-                <form id="registerForm" onsubmit="handleRegister(event)">
-                    <div class="form-group">
-                        <input type="text" id="registerName" placeholder="Full Name" required>
-                    </div>
-                    <div class="form-group">
-                        <input type="email" id="registerEmail" placeholder="Email" required>
-                    </div>
-                    <div class="form-group">
-                        <input type="password" id="registerPassword" placeholder="Password" required>
-                    </div>
-                    <div class="form-group">
-                        <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
-                    </div>
-                    <button type="submit" class="auth-btn">Sign Up</button>
-                </form>
-                <p class="auth-switch">Already have an account? <a href="#" onclick="showLoginForm()">Sign In</a></p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Booking Modal -->
-    <div id="bookingModal" class="modal">
-        <div class="modal-content">
-            <button class="close-btn" onclick="closeBookingModal()">&times;</button>
-            <div class="booking-container">
-                <!-- Booking form will be dynamically loaded here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="assets/js/config.js"></script>
-    <script src="assets/js/api.js"></script>
-    <script src="assets/js/auth.js"></script>
-    <script src="assets/js/movies.js"></script>
-    <script src="assets/js/events.js"></script>
-    <script src="assets/js/booking.js"></script>
-    <script src="assets/js/main.js"></script>
+    <script src="js/script.js"></script>
 </body>
 </html>
