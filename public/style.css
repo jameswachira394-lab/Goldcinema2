@@ -36,6 +36,69 @@ h1 { color: gold; }
   padding: 2rem;
 }
 
+.search-section {
+  max-width: 1000px;
+  margin: 2rem auto 0;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.search-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 25px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 1rem;
+}
+
+.search-bar input:focus {
+  outline: none;
+  border-color: gold;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+}
+
+.search-bar button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  white-space: nowrap;
+}
+
+.filter-options {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.filter-options select {
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 15px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  cursor: pointer;
+}
+
+.filter-options select:focus {
+  outline: none;
+  border-color: gold;
+}
+
+.filter-options option {
+  background: #111;
+  color: #fff;
+}
+
 .media-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -48,8 +111,7 @@ h1 { color: gold; }
 .card {
   background: linear-gradient(to bottom, #111, #000);
   border-radius: 10px;
-  padding: 1.5rem;
-  text-align: center;
+  overflow: hidden;
   box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -59,16 +121,127 @@ h1 { color: gold; }
   box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
 }
 
-.card img {
-  width: 100%;
-  height: 350px;
-  object-fit: cover;
-  border-radius: 8px;
-  transition: transform 0.3s ease;
+.card-poster {
+  position: relative;
+  overflow: hidden;
 }
 
-.card img:hover {
-  transform: scale(1.05);
+.card img {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.card-poster:hover img {
+  transform: scale(1.1);
+}
+
+.card-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card-poster:hover .card-overlay {
+  opacity: 1;
+}
+
+.trailer-btn {
+  background: rgba(255, 215, 0, 0.9);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+
+.card-poster:hover .trailer-btn {
+  transform: translateY(0);
+}
+
+.card-content {
+  padding: 1.5rem;
+}
+
+.movie-info {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 0.5rem 0;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.movie-info span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.movie-desc {
+  font-size: 0.9rem;
+  color: #888;
+  margin: 1rem 0;
+  line-height: 1.4;
+}
+
+.showtime-list {
+  margin: 1rem 0;
+}
+
+.showtime-list h5 {
+  color: gold;
+  margin-bottom: 0.5rem;
+}
+
+.showtime-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.time-btn {
+  background: transparent;
+  border: 1px solid gold;
+  color: gold;
+  padding: 0.5rem 1rem;
+  border-radius: 15px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.time-btn:hover {
+  background: gold;
+  color: #000;
+}
+
+.card-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.book-btn, .info-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
 }
 
 .price-list {
@@ -513,7 +686,62 @@ button:hover {
   background: #FFD700;
 }
 
-/* Responsive Design for Modal */
+/* Footer Styles */
+footer {
+  background: #111;
+  padding: 3rem 1rem 1rem;
+  margin-top: 4rem;
+  border-top: 1px solid rgba(255, 215, 0, 0.1);
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+}
+
+.footer-section {
+  padding: 1rem;
+}
+
+.footer-section h3 {
+  color: gold;
+  margin-bottom: 1rem;
+}
+
+.footer-section p {
+  color: #888;
+  margin: 0.5rem 0;
+}
+
+.social-links {
+  display: flex;
+  gap: 1rem;
+}
+
+.footer-section a {
+  color: #888;
+  text-decoration: none;
+  display: block;
+  margin: 0.5rem 0;
+  transition: color 0.3s ease;
+}
+
+.footer-section a:hover {
+  color: gold;
+}
+
+.footer-bottom {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: #666;
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
   .modal-content {
     margin: 2rem;
@@ -523,5 +751,14 @@ button:hover {
 
   .card-details {
     grid-template-columns: 1fr;
+  }
+  
+  .footer-content {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .social-links {
+    justify-content: center;
   }
 }

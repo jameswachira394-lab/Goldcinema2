@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Cinema - Movie Booking</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">
+                <h1>Gold Cinema</h1>
+            </div>
+            <div class="nav-links">
+                <a href="#movies">Movies</a>
+                <a href="#events">Events</a>
+                <a href="#food">Food & Beverages</a>
+                <a href="#about">About</a>
+                <a href="#contact">Contact</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Search and Filter Section -->
+        <section class="search-section">
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search movies, events...">
+                <select id="categoryFilter" class="filter-select">
+                    <option value="all">All Categories</option>
+                    <option value="movies">Movies</option>
+                    <option value="events">Events</option>
+                </select>
+                <select id="genreFilter" class="filter-select">
+                    <option value="all">All Genres</option>
+                    <option value="action">Action</option>
+                    <option value="comedy">Comedy</option>
+                    <option value="drama">Drama</option>
+                    <option value="horror">Horror</option>
+                    <option value="sci-fi">Sci-Fi</option>
+                </select>
+                <select id="dateFilter" class="filter-select">
+                    <option value="all">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="tomorrow">Tomorrow</option>
+                    <option value="this-week">This Week</option>
+                    <option value="next-week">Next Week</option>
+                </select>
+                <select id="priceFilter" class="filter-select">
+                    <option value="all">All Prices</option>
+                    <option value="under-10">Under $10</option>
+                    <option value="10-15">$10 - $15</option>
+                    <option value="15-20">$15 - $20</option>
+                    <option value="over-20">Over $20</option>
+                </select>
+                <button class="search-btn" onclick="performSearch()">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </section>
+
+        <!-- Movies Section -->
+        <section id="movies">
+            <h2>Now Showing</h2>
+            <div class="movie-grid">
+                <!-- Movie cards will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Events Section -->
+        <section id="events">
+            <h2>Special Events</h2>
+            <div class="movie-grid">
+                <!-- Event cards will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Food & Beverages Section -->
+        <section id="food">
+            <h2>Food & Beverages</h2>
+            <div class="movie-grid">
+                <!-- Food cards will be dynamically added here -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Movie Details Modal -->
+    <div id="movieDetailsModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeMovieDetails()">&times;</button>
+            <div class="movie-details">
+                <div class="movie-poster">
+                    <img id="modalMoviePoster" src="" alt="Movie Poster">
+                </div>
+                <div class="movie-info">
+                    <h2 id="modalMovieTitle"></h2>
+                    <div class="movie-meta">
+                        <span id="modalMovieYear"></span>
+                        <span id="modalMovieRating"></span>
+                        <span id="modalMovieDuration"></span>
+                    </div>
+                    <div class="movie-synopsis" id="modalMovieSynopsis"></div>
+                    <div class="cast-section">
+                        <h3>Cast</h3>
+                        <div class="cast-grid" id="modalMovieCast"></div>
+                    </div>
+                    <div class="showtimes">
+                        <h3>Showtimes</h3>
+                        <div class="time-slots">
+                            <!-- Time slots will be dynamically added here -->
+                        </div>
+                    </div>
+                    <button class="book-btn" onclick="startBooking()">Book Now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trailer Modal -->
+    <div id="trailerModal" class="trailer-modal">
+        <button class="close-btn" onclick="closeTrailer()">&times;</button>
+        <div class="trailer-content" id="trailerPlayer"></div>
+    </div>
+
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeBooking()">&times;</button>
+            <div class="booking-form">
+                <h2>Book Your Tickets</h2>
+                <div class="seat-selection">
+                    <!-- Seat map will be dynamically added here -->
+                </div>
+                <div class="booking-summary">
+                    <!-- Booking summary will be dynamically added here -->
+                </div>
+                <button class="payment-btn" onclick="proceedToPayment()">Proceed to Payment</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>About Gold Cinema</h3>
+                <p>Experience the magic of movies in ultimate comfort and style.</p>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="#movies">Movies</a></li>
+                    <li><a href="#events">Events</a></li>
+                    <li><a href="#food">Food & Beverages</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Contact Us</h3>
+                <p>Email: info@goldcinema.com</p>
+                <p>Phone: (555) 123-4567</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2023 Gold Cinema. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

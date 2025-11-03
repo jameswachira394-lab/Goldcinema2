@@ -1,34 +1,150 @@
 const API_BASE = "http://localhost:4000/api";
 let token = localStorage.getItem("gc_token");
 let currentUser = JSON.parse(localStorage.getItem("gc_user"));
-let allMedia = { movies: [], concerts: [], plays: [] };
-let currentCategory = "movies";
+let currentBooking = null;
 
-document.addEventListener("DOMContentLoaded", async () => {
-  try {
-    // Verify token is still valid
-    if (token && currentUser) {
-      const res = await fetch(`${API_BASE}/verify-token`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) {
-        throw new Error('Token invalid');
-      }
-      showDashboard();
-    } else {
-      showLogin();
-    }
-    
-    // Initialize the page
-    await fetchAllSections();
+// Price configuration
+const PRICES = {
+    movie: { vvip: 750, vip: 300, regular: 150 },
+    concert: { vvip: 800, vip: 500, regular: 250 },
+    play: { vvip: 1000, vip: 500, regular: 250 }
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+    updateAuthStatus();
     setupEventListeners();
     setupPaymentListeners();
-  } catch (err) {
-    console.error('Initialization error:', err);
-    // Clear invalid token/user data
-    logout();
-  }
+    loadFontAwesome();
 });
+
+function loadFontAwesome() {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
+    document.head.appendChild(link);
+}
+
+// Search and Filter Functions
+function performSearch() {
+    const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+    const category = document.getElementById('categoryFilter').value;
+    const genre = document.getElementById('genreFilter').value;
+    const date = document.getElementById('dateFilter').value;
+    const price = document.getElementById('priceFilter').value;
+    
+    // Filter all media items based on criteria
+    filterMedia(searchQuery, category, genre, date, price);
+}
+
+function filterMedia(query, category, genre, date, price) {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        const title = card.querySelector('h4').textContent.toLowerCase();
+        const cardCategory = card.closest('section').id.replace('-section', '');
+        const cardGenre = card.querySelector('.movie-info span:first-child').textContent.toLowerCase();
+        
+        let show = true;
+        
+        // Apply filters
+        if (query && !title.includes(query)) show = false;
+        if (category !== 'all' && cardCategory !== category) show = false;
+        if (genre !== 'all' && !cardGenre.includes(genre)) show = false;
+        
+        // Show/hide card
+        card.style.display = show ? 'block' : 'none';
+    });
+}
+
+// Movie Details Functions
+function showMovieDetails(movieId) {
+    // Fetch movie details from API
+    const movieDetails = getMovieDetails(movieId);
+    
+    // Update modal content
+    document.getElementById('modalMovieTitle').textContent = movieDetails.title;
+    document.getElementById('modalMovieYear').textContent = movieDetails.year;
+    document.getElementById('modalMovieRating').textContent = `${movieDetails.rating}/10`;
+    document.getElementById('modalMovieDuration').textContent = `${movieDetails.duration} min`;
+    document.getElementById('modalMovieSynopsis').textContent = movieDetails.synopsis;
+    document.getElementById('modalMoviePoster').src = movieDetails.poster;
+    
+    // Update cast
+    const castHTML = movieDetails.cast.map(actor => `
+        <div class="cast-member">
+            <img src="${actor.photo}" alt="${actor.name}">
+            <p>${actor.name}</p>
+            <small>${actor.role}</small>
+        </div>
+    `).join('');
+    document.getElementById('modalMovieCast').innerHTML = castHTML;
+    
+    // Show modal
+    document.getElementById('movieDetailsModal').style.display = 'block';
+}
+
+function closeMovieDetails() {
+    document.getElementById('movieDetailsModal').style.display = 'none';
+}
+
+// Trailer Functions
+function showTrailer(videoId) {
+    const player = document.getElementById('trailerPlayer');
+    player.innerHTML = `
+        <iframe
+            src="https://www.youtube.com/embed/${videoId}?autoplay=1"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+        ></iframe>
+    `;
+    document.getElementById('trailerModal').style.display = 'block';
+}
+
+function closeTrailer() {
+    document.getElementById('trailerPlayer').innerHTML = '';
+    document.getElementById('trailerModal').style.display = 'none';
+}
+
+// Showtime Selection
+function selectShowtime(movie, time) {
+    // Remove active class from all time buttons
+    document.querySelectorAll('.time-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Add active class to selected button
+    event.target.classList.add('active');
+    
+    // Store selected time for booking
+    currentBooking = {
+        ...currentBooking,
+        showtime: time
+    };
+}
+
+function updateAuthStatus() {
+    const authLinks = document.querySelectorAll('.auth-hidden');
+    const userLinks = document.querySelectorAll('.user-hidden');
+    const profileSection = document.getElementById('profileSection');
+    
+    if (token && currentUser) {
+        // User is logged in
+        authLinks.forEach(el => el.style.display = 'none');
+        userLinks.forEach(el => el.style.display = 'block');
+        document.getElementById('navUsername').textContent = currentUser.username;
+        
+        // Update profile info if visible
+        if (profileSection && profileSection.style.display !== 'none') {
+            document.getElementById('profileUsername').textContent = currentUser.username;
+            document.getElementById('profileEmail').textContent = currentUser.email || 'Not set';
+        }
+    } else {
+        // User is logged out
+        authLinks.forEach(el => el.style.display = 'inline-block');
+        userLinks.forEach(el => el.style.display = 'none');
+        if (profileSection) profileSection.style.display = 'none';
+    }
+}
 
 function setupPaymentListeners() {
   // Seat category selection
@@ -305,6 +421,63 @@ async function bookPrompt(id, title, category) {
 }
 
 /* BOOKINGS */
+function showBookingModal(title, category) {
+    if (!token) {
+        showToast("Please login first", "error");
+        showLogin();
+        return;
+    }
+
+    const prices = PRICES[category];
+    currentBooking = { title, category, prices };
+    
+    // Update modal content
+    const modal = document.getElementById('bookingModal');
+    const eventDetails = document.getElementById('eventDetails');
+    
+    eventDetails.innerHTML = `
+        <h3>${title}</h3>
+        <p>Event Type: ${category.charAt(0).toUpperCase() + category.slice(1)}</p>
+    `;
+
+    // Update price labels
+    document.querySelector('label[for="vvip"]').textContent = `VVIP - KES ${prices.vvip}`;
+    document.querySelector('label[for="vip"]').textContent = `VIP - KES ${prices.vip}`;
+    document.querySelector('label[for="regular"]').textContent = `Regular - KES ${prices.regular}`;
+
+    // Reset form
+    document.querySelectorAll('input[name="seatCategory"]').forEach(input => input.checked = false);
+    document.querySelectorAll('input[name="paymentMethod"]').forEach(input => input.checked = false);
+    document.getElementById('quantity').value = "1";
+    document.getElementById('totalAmount').textContent = "KES 0";
+    document.getElementById('mpesaForm').style.display = "none";
+    document.getElementById('cardForm').style.display = "none";
+
+    // Show modal
+    modal.style.display = "block";
+}
+
+function updateTotal() {
+    if (!currentBooking) return;
+    
+    const selectedCategory = document.querySelector('input[name="seatCategory"]:checked');
+    const quantity = parseInt(document.getElementById('quantity').value) || 0;
+    
+    if (selectedCategory && quantity > 0) {
+        const price = currentBooking.prices[selectedCategory.value];
+        const total = price * quantity;
+        document.getElementById('totalAmount').textContent = `KES ${total}`;
+    } else {
+        document.getElementById('totalAmount').textContent = 'KES 0';
+    }
+}
+
+function closeModal() {
+    const modal = document.getElementById('bookingModal');
+    modal.style.display = "none";
+    currentBooking = null;
+}
+
 async function getMyBookings() {
   if (!token) return;
   try {
@@ -338,18 +511,14 @@ async function getMyBookings() {
 }
 
 async function processPayment() {
-  if (!token) {
-    showToast("Please login to complete booking", "error");
-    return;
-  }
+    if (!token || !currentBooking) {
+        showToast("Please login to complete booking", "error");
+        return;
+    }
 
-  const modal = document.getElementById("bookingModal");
-  const eventId = modal.dataset.eventId;
-  const eventTitle = modal.dataset.eventTitle;
-  const eventType = modal.dataset.eventType;
-  const selectedCategory = document.querySelector('input[name="seatCategory"]:checked');
-  const quantity = parseInt(document.getElementById('quantity').value);
-  const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
+      const selectedCategory = document.querySelector('input[name="seatCategory"]:checked');
+    const quantity = parseInt(document.getElementById('quantity').value);
+    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
 
   if (!selectedCategory) {
     showToast("Please select a seating category", "error");
@@ -501,11 +670,53 @@ async function showAdmin() {
     ]);
     const users = await usersRes.json();
     const bookings = await bookingsRes.json();
+
+    // Update report counts
+    document.getElementById("totalUsersCount").textContent = users.length;
+    document.getElementById("totalBookingsCount").textContent = bookings.length;
+
+    // Populate tables
     document.getElementById("allCustomers").innerHTML = users.map(u =>
       `<p>${u.username} (${u.email}) [${u.role}]</p>`).join("");
     document.getElementById("allBookings").innerHTML = bookings.map(b =>
       `<p>${b.movie_title} — ${b.username} (${b.email}) — seats:${b.seats.join(", ")} — ${new Date(b.created_at).toLocaleString()}</p>`
     ).join("");
   } catch (err) { console.error(err); alert("Failed to load admin data"); }
+}
+
+async function handleAddMedia(e) {
+  e.preventDefault();
+  const title = document.getElementById("media-title").value;
+  const category = document.getElementById("media-category").value;
+  const description = document.getElementById("media-description").value;
+  const poster = document.getElementById("media-poster").value;
+  const duration = document.getElementById("media-duration").value;
+
+  const mediaData = { title, category, description, poster, duration: parseInt(duration) || null };
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/media`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(mediaData)
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw new Error(result.error || "Failed to add media");
+    }
+
+    showToast("Media added successfully!", "success");
+    document.getElementById("addMediaForm").reset();
+    // Optionally, refresh the media lists on the main page
+    fetchAllSections();
+  } catch (err) {
+    console.error(err);
+    showToast(err.message, "error");
+  }
 }
 // End of script.js
