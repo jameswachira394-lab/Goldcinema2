@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Gold Cinema</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Gold Cinema</h1>
+    <nav class="navbar">
+      <ul>
+        <li><a href="#movies-section">Movies</a></li>
+        <li><a href="#concerts-section">Concerts</a></li>
+        <li><a href="#plays-section">Plays</a></li>
+        <!-- Auth links will be updated by JS -->
+        <li class="auth-hidden"><a href="#" onclick="showLogin();return false;">Login</a></li>
+        <li class="auth-hidden"><a href="#" onclick="showRegister();return false;">Register</a></li>
+        <li class="user-hidden" style="display:none;">
+          <div class="profile-menu">
+            <a href="#" onclick="showProfile();return false;" class="profile-trigger">
+              <span id="navUsername">Profile</span> ▼
+            </a>
+            <div class="profile-dropdown">
+              <a href="#" onclick="showProfile();return false;">My Profile</a>
+              <a href="#" onclick="showMyBookings();return false;">My Bookings</a>
+              <a href="#" onclick="logout();return false;">Logout</a>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h2>Welcome to Gold Cinema</h2>
+    <p>Book tickets for the latest Movies, Concerts, and Plays all in one place.</p>
+  </section>
+
+  <!-- User Forms Section -->
+  <div id="userForms">
+    <!-- Auth Forms -->
+    <div id="auth" style="display:none;">
+      <!-- Login Form -->
+      <div id="login" class="auth-form">
+        <h2>Login</h2>
+        <form onsubmit="handleLogin(event)">
+          <label for="login-username">Email / Username</label>
+          <input id="login-username" required />
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" required />
+          <button type="submit">Login</button>
+          <p>Don't have an account? <a href="#" onclick="showRegister();return false;">Register</a></p>
+        </form>
+      </div>
+     
+      <!-- Register Form -->
+      <div id="register" class="auth-form" style="display:none;">
+        <h2>Register</h2>
+        <form onsubmit="handleRegister(event)">
+          <label for="reg-email">Email</label>
+          <input id="reg-email" type="email" required />
+          <br>
+          <label for="reg-username">Username</label>
+          <input id="reg-username" required />
+          <br>
+          <label for="reg-password">Password</label>
+          <input id="reg-password" type="password" required />
+          <br>
+          <label for="reg-confirm">Confirm Password</label>
+          <input id="reg-confirm" type="password" required />
+          <br>
+          <button type="submit">Register</button>
+          <p>Already have an account? <a href="#" onclick="showLogin();return false;">Login</a></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- Profile Section -->
+    <div id="profileSection" class="profile-section" style="display:none;">
+      <div class="profile-container">
+        <h2>My Profile</h2>
+        <div class="profile-info">
+          <div class="profile-field">
+            <label>Username:</label>
+            <span id="profileUsername"></span>
+          </div>
+          <div class="profile-field">
+            <label>Email:</label>
+            <span id="profileEmail"></span>
+          </div>
+          <div class="profile-field">
+            <label>Member Since:</label>
+            <span id="profileJoinDate"></span>
+          </div>
+        </div>
+        <div class="profile-actions">
+          <button onclick="editProfile()">Edit Profile</button>
+          <button onclick="changePassword()">Change Password</button>
+        </div>
+      </div>
+      
+      <div class="bookings-section">
+        <h3>My Bookings</h3>
+        <div id="userBookings" class="bookings-container">
+          <!-- Bookings will be populated dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <!-- Dashboard -->
+    <div id="dashboard" style="display:none;">
+      <h2>Welcome, <span id="userDisplay"></span>!</h2>
+      <div id="myBookings"></div>
+      <div id="ticketArea"></div>
+      <button onclick="logout()">Logout</button>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="admin" style="display:none;">
+      <h2>Admin Dashboard</h2>
+      <h3>All Customers</h3>
+      <div id="allCustomers"></div>
+      <h3>All Bookings</h3>
+      <div id="allBookings"></div>
+      <button onclick="logout()">Logout</button>
+    </div>
+
+    <!-- MOVIES -->
+    <section id="movies-section">
+      <h2>Now Showing</h2>
+      <div class="media-grid" id="movies">
+        <div class="card">
+          <img src="https://m.media-amazon.com/images/I/71niXI3lxlL._AC_UF1000,1000_QL80_.jpg" alt="Inception" />
+          <h4>Inception</h4>
+          <p>Genre: Sci-Fi | Duration: 148 min</p>
+          <div class="price-list">
+            <span>VVIP: KES 5000</span>
+            <span>VIP: KES 3000</span>
+            <span>Regular: KES 1500</span>
+          </div>
+          <button onclick="showBookingModal('Inception', 'movie')">Book Now</button>
+        </div>
+        <div class="card">
+          <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRmNKxE0zhCChS4TuOrEoqH4XI1UNBIhootug&s" alt="Avengers" />
+          <h4>Avengers: Age of Ultron</h4>
+          <p>Genre: Action | Duration: 141 min</p>
+          <div class="price-list">
+            <span>VVIP: KES 5000</span>
+            <span>VIP: KES 3000</span>
+            <span>Regular: KES 1500</span>
+          </div>
+          <button onclick="showBookingModal('Avengers: Age of Ultron', 'movie')">Book Now</button>
+        </div>
+        <div class="card">
+          <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTZgarY79EPQu_BBe86NdqmVxRhgH0N6AgLEA&s" alt="Interstellar" />
+          <h4>Interstellar</h4>
+          <p>Genre: Sci-Fi | Duration: 169 min</p>
+          <div class="price-list">
+            <span>VVIP: KES 5000</span>
+            <span>VIP: KES 3000</span>
+            <span>Regular: KES 1500</span>
+          </div>
+          <button onclick="showBookingModal('Interstellar', 'movie')">Book Now</button>
+        </div>
+        <div class="card">
+          <img src="https://m.media-amazon.com/images/M/MV5BMTk4NjcwMzAzN15BMl5BanBnXkFtZTcwODUyNzIzMw@@._V1_FMjpg_UX1000_.jpg" alt="TRON" />
+          <h4>TRON: Legacy</h4>
+          <p>Genre: Sci-Fi | Duration: 125 min</p>
+          <div class="price-list">
+            <span>VVIP: KES 5000</span>
+            <span>VIP: KES 3000</span>
+            <span>Regular: KES 1500</span>
+          </div>
+          <button onclick="showBookingModal('TRON: Legacy', 'movie')">Book Now</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONCERTS -->
+    <section id="concerts-section">
+      <h2>Upcoming Concerts</h2>
+      <div class="media-grid" id="concerts">
+        <div class="card">
+          <img src="https://images.ctfassets.net/wg1141eg84ns/1f5qGdqXTry030imgJwTLL/997dc6e625b3de6b90c2c63b0658148e/Coldplay.jpg" alt="Coldplay" />
+          <h4>Coldplay World Tour</h4>
+          <p>Venue: London | Date: Dec 12, 2025</p>
+          <div class="price-list">
+            <span>VVIP: KES 8000</span>
+            <span>VIP: KES 5000</span>
+            <span>Regular: KES 2500</span>
+          </div>
+          <button onclick="showBookingModal('Coldplay World Tour', 'concert')">Book Now</button>
+        </div>
+      
+        <div class="card">
+          <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSWQ4OlWxWBrPpt8xtRwrenu9PpEb6NSZCZvw&s" alt="BTS Concert" />
+          <h4>BTS Live in Tokyo</h4>
+          <p>Venue: Tokyo Dome | Date: Nov 30, 2025</p>
+          <div class="price-list">
+            <span>VVIP: KES 8000</span>
+            <span>VIP: KES 5000</span>
+            <span>Regular: KES 2500</span>
+          </div>
+          <button onclick="showBookingModal('BTS Live in Tokyo', 'concert')">Book Now</button>
+        </div>
+    
+        <div class="card">
+          <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTftCLubK1-Sb2IOpB1IuZjq56jnlQCknEMcg&s" alt="Sauti sol Concert" />
+          <h4>Sauti Sol Concert Live in Nairobi</h4>
+          <p>Venue: Rema Fest | Date: Nov 30, 2025</p>
+          <div class="price-list">
+            <span>VVIP: KES 8000</span>
+            <span>VIP: KES 5000</span>
+            <span>Regular: KES 2500</span>
+          </div>
+          <button onclick="showBookingModal('Sauti Sol Concert Live in Nairobi', 'concert')">Book Now</button>
+        </div>
+        <div class="card">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRq5vVfOlFlMdHxA8SwRW2rv4aSN5MeUvzPFw&s" alt="Adele Concert" />
+            <h4>Adele Live at Wembley</h4> 
+            <p>Venue: Wembley Stadium | Date: Feb 20, 2026</p>
+            <div class="price-list">
+              <span>VVIP: KES 8000</span>
+              <span>VIP: KES 5000</span>
+              <span>Regular: KES 2500</span>
+            </div>
+            <button onclick="showBookingModal('Adele Live at Wembley', 'concert')">Book Now</button>
+        </div>
+      </div>
+    </section>
+   
+
+    <!-- PLAYS -->
+    <section id="plays-section">
+      <h2>Featured Plays</h2>
+      <div class="media-grid" id="plays">
+        <div class="card">
+          <img src="https://m.media-amazon.com/images/M/MV5BYTc3MWIyMzAtMTZmNC00YmNjLWIyZTgtMmU4NjZkYzZkOThkXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="Hamilton" />
+          <h4>Hamilton</h4>
+          <p>Venue: Broadway | Duration: 160 min</p>
+          <div class="price-list">
+            <span>VVIP: KES 600</span>
+            <span>VIP: KES 400</span>
+            <span>Regular: KES 200</span>
+          </div>
+          <button onclick="showBookingModal('Hamilton', 'play')">Book Now</button>
+        </div>
+        <div class="card">
+          <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSQTl6A5-sNvabov49yKPWG0kPy-povbO_g6A&s" alt="Lion King" />
+          <h4>The Lion King</h4>
+          <p>Venue: Sydney Opera House | Duration: 120 min</p>
+          <div class="price-list">
+            <span>VVIP: KES 600</span>
+            <span>VIP: KES 400</span>
+            <span>Regular: KES 200</span>
+          </div>
+          <button onclick="showBookingModal('The Lion King', 'play')">Book Now</button>
+        </div>
+         <div class="card">
+          <img src="https://www.vukuzenzele.gov.za/sites/default/files/images_2021_09_01/Theatre%20Plays.png" alt="I will Marry when i want" />
+          <h4>I will Marry when i wan</h4>
+          <p>Venue: Kenya Opera House | Duration: 120 min</p>
+          <div class="price-list">
+            <span>VVIP: KES 1000</span>
+            <span>VIP: KES 500</span>
+            <span>Regular: KES 250</span>
+          </div>
+          <button onclick="showBookingModal('I will Marry when i want', 'play')">Book Now</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Booking Modal -->
+  <div id="bookingModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h2>Book Tickets</h2>
+      <div id="eventDetails"></div>
+      
+      <div class="seating-section">
+        <h3>Select Seating Category</h3>
+        <div class="seating-options">
+          <div class="seat-category">
+            <input type="radio" name="seatCategory" id="vvip" value="vvip">
+            <label for="vvip">VVIP - KES 5000</label>
+            <p class="seat-desc">Premium seating with exclusive amenities</p>
+          </div>
+          <div class="seat-category">
+            <input type="radio" name="seatCategory" id="vip" value="vip">
+            <label for="vip">VIP - KES 3000</label>
+            <p class="seat-desc">Enhanced viewing experience</p>
+          </div>
+          <div class="seat-category">
+            <input type="radio" name="seatCategory" id="regular" value="regular">
+            <label for="regular">Regular - KES 1500</label>
+            <p class="seat-desc">Standard seating</p>
+          </div>
+        </div>
+        
+        <div class="ticket-quantity">
+          <label for="quantity">Number of Tickets:</label>
+          <input type="number" id="quantity" min="1" max="10" value="1" onchange="updateTotal()">
+        </div>
+        
+        <div class="total-amount">
+          <h4>Total Amount: <span id="totalAmount">KES 0</span></h4>
+        </div>
+      </div>
+      
+      <div class="payment-section">
+        <h3>Payment Method</h3>
+        <div class="payment-options">
+          <div class="payment-option">
+            <input type="radio" name="paymentMethod" id="mpesa" value="mpesa">
+            <label for="mpesa">M-PESA</label>
+          </div>
+          <div class="payment-option">
+            <input type="radio" name="paymentMethod" id="card" value="card">
+            <label for="card">Credit/Debit Card</label>
+          </div>
+        </div>
+        
+        <!-- M-PESA Form -->
+        <div id="mpesaForm" class="payment-form" style="display:none;">
+          <label for="phone">M-PESA Phone Number:</label>
+          <input type="tel" id="phone" placeholder="254700000000" pattern="254[0-9]{9}" required>
+          <p class="payment-info">You will receive an M-PESA prompt to complete payment</p>
+        </div>
+        
+        <!-- Card Form -->
+        <div id="cardForm" class="payment-form" style="display:none;">
+          <label for="cardNumber">Card Number:</label>
+          <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" required>
+          <div class="card-details">
+            <div>
+              <label for="expiry">Expiry Date:</label>
+              <input type="text" id="expiry" placeholder="MM/YY" required>
+            </div>
+            <div>
+              <label for="cvv">CVV:</label>
+              <input type="text" id="cvv" placeholder="123" required>
+            </div>
+          </div>
+        </div>
+        
+        <button id="payButton" class="pay-button" onclick="processPayment()">Pay Now</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>&copy; 2025 Gold Cinema
+    <br>
+    Contact us:goldcinema@gmail.com
+    Phone:+254700000000
+    Address: Nairobi, Kenya
+    Follow us on
+    <a href="#Gold cinema">Facebook</a> |
+    <a href="#@Gold cinema">Twitter</a> |
+    <a href="#@Gold cinema ">Instagram</a>
+    <br>
+  </footer>
+  <script src="script.js"></script>
+</body>
+</html>
