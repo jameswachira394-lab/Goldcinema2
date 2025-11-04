@@ -1,4 +1,5 @@
-// Initialize charts and data when the page loads
+// Admin Dashboard Logic with LocalStorage Persistence
+
 document.addEventListener('DOMContentLoaded', () => {
     initializeCharts();
     loadDashboardData();
@@ -8,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
-// Chart initialization
+// ===== CHART =====
 function initializeCharts() {
     const ctx = document.getElementById('bookingChart').getContext('2d');
     new Chart(ctx, {
@@ -26,104 +27,86 @@ function initializeCharts() {
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: {
-                    labels: {
-                        color: '#fff'
-                    }
-                }
-            },
+            plugins: { legend: { labels: { color: '#fff' } } },
             scales: {
-                y: {
-                    grid: {
-                        color: 'rgba(255,255,255,0.1)'
-                    },
-                    ticks: {
-                        color: '#fff'
-                    }
-                },
-                x: {
-                    grid: {
-                        color: 'rgba(255,255,255,0.1)'
-                    },
-                    ticks: {
-                        color: '#fff'
-                    }
-                }
+                y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#fff' } },
+                x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#fff' } }
             }
         }
     });
 }
 
-// Load dashboard data
-function loadDashboardData() {
-    // Load recent activity
-    const activityList = document.querySelector('.activity-list');
-    const recentActivities = [
-        { type: 'booking', message: 'New booking for "Inception"', time: '5 minutes ago' },
-        { type: 'event', message: 'New event "Movie Marathon" created', time: '1 hour ago' },
-        { type: 'advisor', message: 'New advisor John Doe assigned', time: '2 hours ago' },
-        // Add more activities
-    ];
+// ===== UTILITIES =====
+function getLocalData(key, fallback = []) {
+    return JSON.parse(localStorage.getItem(key)) || fallback;
+}
 
-    activityList.innerHTML = recentActivities.map(activity => `
+function saveLocalData(key, data) {
+    localStorage.setItem(key, JSON.stringify(data));
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// ===== DASHBOARD =====
+function loadDashboardData() {
+    const activityList = document.querySelector('.activity-list');
+    const activities = getLocalData('activities', [
+        { type: 'booking', message: 'New booking for "Inception"', time: '5 minutes ago' },
+        { type: 'event', message: 'Event "Movie Marathon" created', time: '1 hour ago' },
+        { type: 'advisor', message: 'Advisor John Doe assigned', time: '2 hours ago' }
+    ]);
+
+    activityList.innerHTML = activities.map(a => `
         <div class="activity-item">
-            <i class="fas ${getActivityIcon(activity.type)}"></i>
+            <i class="fas ${getActivityIcon(a.type)}"></i>
             <div class="activity-details">
-                <p>${activity.message}</p>
-                <small>${activity.time}</small>
+                <p>${a.message}</p>
+                <small>${a.time}</small>
             </div>
-        </div>
-    `).join('');
+        </div>`).join('');
 }
 
 function getActivityIcon(type) {
-    const icons = {
-        booking: 'fa-ticket-alt',
-        event: 'fa-calendar-alt',
-        advisor: 'fa-user-tie',
-        default: 'fa-info-circle'
-    };
+    const icons = { booking: 'fa-ticket-alt', event: 'fa-calendar-alt', advisor: 'fa-user-tie', default: 'fa-info-circle' };
     return icons[type] || icons.default;
 }
 
-// Event Management
+// ===== EVENTS =====
+let editEventId = null;
+
 function loadEvents() {
     const eventsGrid = document.querySelector('.events-grid');
-    const events = [
-        {
-            id: 1,
-            title: 'Movie Marathon',
-            date: '2023-11-15',
-            description: 'All day movie marathon featuring classic films',
-            image: 'event1.jpg',
-            price: 49.99,
-            capacity: 100
-        },
-        // Add more events
-    ];
+    const events = getLocalData('events', []);
+    if (!events.length) {
+        const sample = [{ id: Date.now(), title: 'Movie Marathon', date: '2025-11-15', description: 'All day classics', image: 'event1.jpg', price: 49.99, capacity: 100 }];
+        saveLocalData('events', sample);
+        return loadEvents();
+    }
 
-    eventsGrid.innerHTML = events.map(event => `
+    eventsGrid.innerHTML = events.map(e => `
         <div class="event-card">
-            <img src="${event.image}" alt="${event.title}">
+            <img src="${e.image}" alt="${e.title}">
             <div class="event-info">
-                <h3>${event.title}</h3>
-                <p>${event.description}</p>
+                <h3>${e.title}</h3>
+                <p>${e.description}</p>
                 <div class="event-meta">
-                    <span><i class="fas fa-calendar"></i> ${formatDate(event.date)}</span>
-                    <span><i class="fas fa-dollar-sign"></i> ${event.price}</span>
-                    <span><i class="fas fa-users"></i> ${event.capacity}</span>
+                    <span><i class="fas fa-calendar"></i> ${formatDate(e.date)}</span>
+                    <span><i class="fas fa-dollar-sign"></i> ${e.price}</span>
+                    <span><i class="fas fa-users"></i> ${e.capacity}</span>
                 </div>
                 <div class="event-actions">
-                    <button onclick="editEvent(${event.id})" class="admin-btn">Edit</button>
-                    <button onclick="deleteEvent(${event.id})" class="admin-btn danger">Delete</button>
+                    <button onclick="editEvent(${e.id})" class="admin-btn">Edit</button>
+                    <button onclick="deleteEvent(${e.id})" class="admin-btn danger">Delete</button>
                 </div>
             </div>
-        </div>
-    `).join('');
+        </div>`).join('');
 }
 
 function showAddEventModal() {
+    editEventId = null;
+    document.getElementById('addEventForm').reset();
     document.getElementById('addEventModal').style.display = 'block';
 }
 
@@ -131,48 +114,84 @@ function closeAddEventModal() {
     document.getElementById('addEventModal').style.display = 'none';
 }
 
-function handleAddEvent(event) {
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    // Add event to database
-    // Reload events list
-    loadEvents();
+function handleAddEvent(ev) {
+    ev.preventDefault();
+    const events = getLocalData('events', []);
+    const form = ev.target;
+
+    const data = {
+        id: editEventId || Date.now(),
+        title: form.eventTitle.value,
+        date: form.eventDate.value,
+        description: form.eventDescription.value,
+        image: form.eventImage.value || 'default.jpg',
+        price: parseFloat(form.eventPrice.value),
+        capacity: parseInt(form.eventCapacity.value)
+    };
+
+    if (editEventId) {
+        const idx = events.findIndex(e => e.id === editEventId);
+        events[idx] = data;
+    } else {
+        events.push(data);
+    }
+
+    saveLocalData('events', events);
     closeAddEventModal();
+    loadEvents();
 }
 
-// Advisor Management
-function loadAdvisors() {
-    const advisorsGrid = document.querySelector('.advisors-grid');
-    const advisors = [
-        {
-            id: 1,
-            name: 'John Doe',
-            email: 'john@example.com',
-            phone: '123-456-7890',
-            specialization: 'VIP Customers',
-            activeCustomers: 15
-        },
-        // Add more advisors
-    ];
+function editEvent(id) {
+    const events = getLocalData('events', []);
+    const e = events.find(ev => ev.id === id);
+    if (!e) return;
+    editEventId = id;
 
-    advisorsGrid.innerHTML = advisors.map(advisor => `
+    const f = document.getElementById('addEventForm');
+    f.eventTitle.value = e.title;
+    f.eventDate.value = e.date;
+    f.eventDescription.value = e.description;
+    f.eventPrice.value = e.price;
+    f.eventCapacity.value = e.capacity;
+    document.getElementById('addEventModal').style.display = 'block';
+}
+
+function deleteEvent(id) {
+    let events = getLocalData('events', []);
+    events = events.filter(e => e.id !== id);
+    saveLocalData('events', events);
+    loadEvents();
+}
+
+// ===== ADVISORS =====
+let editAdvisorId = null;
+
+function loadAdvisors() {
+    const grid = document.querySelector('.advisors-grid');
+    const advisors = getLocalData('advisors', []);
+    if (!advisors.length) {
+        const sample = [{ id: Date.now(), name: 'John Doe', email: 'john@example.com', phone: '123-456-7890', specialization: 'VIP Customers', activeCustomers: 15 }];
+        saveLocalData('advisors', sample);
+        return loadAdvisors();
+    }
+
+    grid.innerHTML = advisors.map(a => `
         <div class="advisor-card">
-            <div class="advisor-info">
-                <h3>${advisor.name}</h3>
-                <p><i class="fas fa-envelope"></i> ${advisor.email}</p>
-                <p><i class="fas fa-phone"></i> ${advisor.phone}</p>
-                <p><i class="fas fa-star"></i> ${advisor.specialization}</p>
-                <p><i class="fas fa-users"></i> ${advisor.activeCustomers} active customers</p>
-            </div>
+            <h3>${a.name}</h3>
+            <p><i class="fas fa-envelope"></i> ${a.email}</p>
+            <p><i class="fas fa-phone"></i> ${a.phone}</p>
+            <p><i class="fas fa-star"></i> ${a.specialization}</p>
+            <p><i class="fas fa-users"></i> ${a.activeCustomers} active</p>
             <div class="advisor-actions">
-                <button onclick="editAdvisor(${advisor.id})" class="admin-btn">Edit</button>
-                <button onclick="deleteAdvisor(${advisor.id})" class="admin-btn danger">Delete</button>
+                <button onclick="editAdvisor(${a.id})" class="admin-btn">Edit</button>
+                <button onclick="deleteAdvisor(${a.id})" class="admin-btn danger">Delete</button>
             </div>
-        </div>
-    `).join('');
+        </div>`).join('');
 }
 
 function showAddAdvisorModal() {
+    editAdvisorId = null;
+    document.getElementById('addAdvisorForm').reset();
     document.getElementById('addAdvisorModal').style.display = 'block';
 }
 
@@ -180,55 +199,80 @@ function closeAddAdvisorModal() {
     document.getElementById('addAdvisorModal').style.display = 'none';
 }
 
-function handleAddAdvisor(event) {
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    // Add advisor to database
-    // Reload advisors list
-    loadAdvisors();
+function handleAddAdvisor(ev) {
+    ev.preventDefault();
+    const advisors = getLocalData('advisors', []);
+    const form = ev.target;
+
+    const data = {
+        id: editAdvisorId || Date.now(),
+        name: form.advisorName.value,
+        email: form.advisorEmail.value,
+        phone: form.advisorPhone.value,
+        specialization: form.advisorSpecialization.value,
+        activeCustomers: Math.floor(Math.random() * 30)
+    };
+
+    if (editAdvisorId) {
+        const idx = advisors.findIndex(a => a.id === editAdvisorId);
+        advisors[idx] = data;
+    } else {
+        advisors.push(data);
+    }
+
+    saveLocalData('advisors', advisors);
     closeAddAdvisorModal();
+    loadAdvisors();
 }
 
-// Customer-Advisor Assignments
+function editAdvisor(id) {
+    const advisors = getLocalData('advisors', []);
+    const a = advisors.find(ad => ad.id === id);
+    if (!a) return;
+    editAdvisorId = id;
+
+    const f = document.getElementById('addAdvisorForm');
+    f.advisorName.value = a.name;
+    f.advisorEmail.value = a.email;
+    f.advisorPhone.value = a.phone;
+    f.advisorSpecialization.value = a.specialization;
+    document.getElementById('addAdvisorModal').style.display = 'block';
+}
+
+function deleteAdvisor(id) {
+    let advisors = getLocalData('advisors', []);
+    advisors = advisors.filter(a => a.id !== id);
+    saveLocalData('advisors', advisors);
+    loadAdvisors();
+}
+
+// ===== ASSIGNMENTS =====
 function loadAssignments() {
-    const assignmentsTable = document.querySelector('.assignments-table tbody');
-    const assignments = [
-        {
-            customer: 'Alice Johnson',
-            advisor: 'John Doe',
-            status: 'Active',
-            lastContact: '2023-11-02'
-        },
-        // Add more assignments
-    ];
+    const tbody = document.querySelector('.assignments-table tbody');
+    const advisors = getLocalData('advisors', []);
+    const assignments = getLocalData('assignments', [
+        { customer: 'Alice Johnson', advisor: advisors[0]?.name || 'John Doe', status: 'Active', lastContact: '2025-11-02' }
+    ]);
 
-    assignmentsTable.innerHTML = assignments.map(assignment => `
+    tbody.innerHTML = assignments.map(as => `
         <tr>
-            <td>${assignment.customer}</td>
-            <td>${assignment.advisor}</td>
-            <td><span class="status ${assignment.status.toLowerCase()}">${assignment.status}</span></td>
-            <td>${formatDate(assignment.lastContact)}</td>
+            <td>${as.customer}</td>
+            <td>${as.advisor}</td>
+            <td><span class="status ${as.status.toLowerCase()}">${as.status}</span></td>
+            <td>${formatDate(as.lastContact)}</td>
             <td>
-                <button onclick="editAssignment('${assignment.customer}')" class="admin-btn small">Edit</button>
-                <button onclick="viewHistory('${assignment.customer}')" class="admin-btn small">History</button>
+                <button class="admin-btn small">Edit</button>
+                <button class="admin-btn small">History</button>
             </td>
-        </tr>
-    `).join('');
+        </tr>`).join('');
+
+    saveLocalData('assignments', assignments);
 }
 
-// Utility Functions
-function formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
-}
-
+// ===== NAVIGATION =====
 function setupEventListeners() {
-    // Navigation
     document.querySelectorAll('.admin-nav a').forEach(link => {
-        link.addEventListener('click', (e) => {
+        link.addEventListener('click', e => {
             e.preventDefault();
             const sectionId = link.getAttribute('data-section');
             showSection(sectionId);
@@ -237,19 +281,10 @@ function setupEventListeners() {
 }
 
 function showSection(sectionId) {
-    // Hide all sections
-    document.querySelectorAll('.admin-section').forEach(section => {
-        section.classList.remove('active');
-    });
-    
-    // Show selected section
+    document.querySelectorAll('.admin-section').forEach(sec => sec.classList.remove('active'));
     document.getElementById(sectionId).classList.add('active');
-    
-    // Update navigation
-    document.querySelectorAll('.admin-nav a').forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('data-section') === sectionId) {
-            link.classList.add('active');
-        }
+    document.querySelectorAll('.admin-nav a').forEach(l => {
+        l.classList.remove('active');
+        if (l.getAttribute('data-section') === sectionId) l.classList.add('active');
     });
 }

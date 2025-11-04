@@ -1,232 +1,112 @@
-const API_BASE = "http://localhost:4000/api";
+const API_BASE = "http://localhost:3000/api";
 let token = localStorage.getItem("gc_token");
 let currentUser = JSON.parse(localStorage.getItem("gc_user"));
 let currentBooking = null;
 
-// Price configuration
+// In-memory store for media
+const allMedia = { movies: [], concerts: [], plays: [] };
+
+// Default prices
 const PRICES = {
-    movie: { vvip: 750, vip: 300, regular: 150 },
-    concert: { vvip: 800, vip: 500, regular: 250 },
-    play: { vvip: 1000, vip: 500, regular: 250 }
+  movie: { vvip: 750, vip: 300, regular: 150 },
+  concert: { vvip: 800, vip: 500, regular: 250 },
+  play: { vvip: 1000, vip: 500, regular: 250 }
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-    updateAuthStatus();
-    setupEventListeners();
-    setupPaymentListeners();
-    loadFontAwesome();
+  updateAuthStatus();
+  setupEventListeners();
+  setupPaymentListeners();
+  loadFontAwesome();
+  fetchAllSections();
 });
 
+/* ------------------ SAFE STUBS ------------------ */
+function setupEventListeners() {}
+function setupPaymentUIListeners() {}
+function updateAuthUI() {}
+
+/* ------------------ HELPERS ------------------ */
 function loadFontAwesome() {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
-    document.head.appendChild(link);
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css";
+  document.head.appendChild(link);
 }
 
-// Search and Filter Functions
+/* ------------------ SEARCH & FILTER ------------------ */
 function performSearch() {
-    const searchQuery = document.getElementById('searchInput').value.toLowerCase();
-    const category = document.getElementById('categoryFilter').value;
-    const genre = document.getElementById('genreFilter').value;
-    const date = document.getElementById('dateFilter').value;
-    const price = document.getElementById('priceFilter').value;
-    
-    // Filter all media items based on criteria
-    filterMedia(searchQuery, category, genre, date, price);
+  const q = document.getElementById("searchInput").value.toLowerCase();
+  const category = document.getElementById("categoryFilter").value;
+  const cards = document.querySelectorAll(".card");
+
+  cards.forEach(card => {
+    const title = card.querySelector("h4").textContent.toLowerCase();
+    const section = card.closest("section").id;
+    let visible = true;
+
+    if (q && !title.includes(q)) visible = false;
+    if (category !== "all" && !section.includes(category)) visible = false;
+
+    card.style.display = visible ? "block" : "none";
+  });
 }
 
-function filterMedia(query, category, genre, date, price) {
-    const cards = document.querySelectorAll('.card');
-    cards.forEach(card => {
-        const title = card.querySelector('h4').textContent.toLowerCase();
-        const cardCategory = card.closest('section').id.replace('-section', '');
-        const cardGenre = card.querySelector('.movie-info span:first-child').textContent.toLowerCase();
-        
-        let show = true;
-        
-        // Apply filters
-        if (query && !title.includes(query)) show = false;
-        if (category !== 'all' && cardCategory !== category) show = false;
-        if (genre !== 'all' && !cardGenre.includes(genre)) show = false;
-        
-        // Show/hide card
-        card.style.display = show ? 'block' : 'none';
-    });
+/* ------------------ MOVIE DETAILS ------------------ */
+function showMovieDetails(title) {
+  const movie = getMovieDetails(title);
+  if (!movie) return showToast("Movie not found", "error");
+
+  document.getElementById("modalMovieTitle").textContent = movie.title || "";
+  document.getElementById("modalMovieDuration").textContent = `${movie.duration || "—"} min`;
+  document.getElementById("modalMoviePoster").src = movie.poster || "images/default-movie.jpg";
+  document.getElementById("modalMovieSynopsis").textContent = movie.description || "";
+
+  document.getElementById("movieDetailsModal").style.display = "block";
 }
 
-// Movie Details Functions
-function showMovieDetails(movieId) {
-    // Fetch movie details from API
-    const movieDetails = getMovieDetails(movieId);
-    
-    // Update modal content
-    document.getElementById('modalMovieTitle').textContent = movieDetails.title;
-    document.getElementById('modalMovieYear').textContent = movieDetails.year;
-    document.getElementById('modalMovieRating').textContent = `${movieDetails.rating}/10`;
-    document.getElementById('modalMovieDuration').textContent = `${movieDetails.duration} min`;
-    document.getElementById('modalMovieSynopsis').textContent = movieDetails.synopsis;
-    document.getElementById('modalMoviePoster').src = movieDetails.poster;
-    
-    // Update cast
-    const castHTML = movieDetails.cast.map(actor => `
-        <div class="cast-member">
-            <img src="${actor.photo}" alt="${actor.name}">
-            <p>${actor.name}</p>
-            <small>${actor.role}</small>
-        </div>
-    `).join('');
-    document.getElementById('modalMovieCast').innerHTML = castHTML;
-    
-    // Show modal
-    document.getElementById('movieDetailsModal').style.display = 'block';
+function getMovieDetails(title) {
+  return allMedia.movies.find(m => m.title === title);
 }
 
 function closeMovieDetails() {
-    document.getElementById('movieDetailsModal').style.display = 'none';
+  document.getElementById("movieDetailsModal").style.display = "none";
 }
 
-// Trailer Functions
+/* ------------------ TRAILER ------------------ */
 function showTrailer(videoId) {
-    const player = document.getElementById('trailerPlayer');
-    player.innerHTML = `
-        <iframe
-            src="https://www.youtube.com/embed/${videoId}?autoplay=1"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen
-        ></iframe>
-    `;
-    document.getElementById('trailerModal').style.display = 'block';
+  const player = document.getElementById("trailerPlayer");
+  player.innerHTML = `
+    <iframe
+      src="https://www.youtube.com/embed/${videoId}?autoplay=1"
+      frameborder="0"
+      allow="autoplay; encrypted-media"
+      allowfullscreen
+    ></iframe>
+  `;
+  document.getElementById("trailerModal").style.display = "block";
 }
 
 function closeTrailer() {
-    document.getElementById('trailerPlayer').innerHTML = '';
-    document.getElementById('trailerModal').style.display = 'none';
+  document.getElementById("trailerPlayer").innerHTML = "";
+  document.getElementById("trailerModal").style.display = "none";
 }
 
-// Showtime Selection
-function selectShowtime(movie, time) {
-    // Remove active class from all time buttons
-    document.querySelectorAll('.time-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    // Add active class to selected button
-    event.target.classList.add('active');
-    
-    // Store selected time for booking
-    currentBooking = {
-        ...currentBooking,
-        showtime: time
-    };
-}
-
+/* ------------------ AUTH ------------------ */
 function updateAuthStatus() {
-    try {
-        updateAuthUI();
-    } catch (error) {
-        console.error("Error updating auth status:", error);
-    }
-    const authLinks = document.querySelectorAll('.auth-hidden');
-    const userLinks = document.querySelectorAll('.user-hidden');
-    const profileSection = document.getElementById('profileSection');
-    
-    if (token && currentUser) {
-        // User is logged in
-        authLinks.forEach(el => el.style.display = 'none');
-        userLinks.forEach(el => el.style.display = 'block');
-        document.getElementById('navUsername').textContent = currentUser.username;
-        
-        // Update profile info if visible
-        if (profileSection && profileSection.style.display !== 'none') {
-            document.getElementById('profileUsername').textContent = currentUser.username;
-            document.getElementById('profileEmail').textContent = currentUser.email || 'Not set';
-        }
-    } else {
-        // User is logged out
-        authLinks.forEach(el => el.style.display = 'inline-block');
-        userLinks.forEach(el => el.style.display = 'none');
-        if (profileSection) profileSection.style.display = 'none';
-    }
-}
+  const authLinks = document.querySelectorAll(".auth-hidden");
+  const userLinks = document.querySelectorAll(".user-hidden");
 
-function setupPaymentListeners() {
-  try {
-      setupPaymentUIListeners();
-  } catch (error) {
-      console.error("Error setting up payment listeners:", error);
-      showToast("Error initializing payment form.", "error");
-  }
-  // Seat category selection
-  document.querySelectorAll('input[name="seatCategory"]').forEach(input => {
-    input.addEventListener('change', updateTotal);
-  });
-
-  // Ticket quantity change
-  document.getElementById('quantity').addEventListener('change', updateTotal);
-
-  // Payment method selection
-  document.querySelectorAll('input[name="paymentMethod"]').forEach(input => {
-    input.addEventListener('change', () => {
-      const method = input.value;
-      document.getElementById('mpesaForm').style.display = method === 'mpesa' ? 'block' : 'none';
-      document.getElementById('cardForm').style.display = method === 'card' ? 'block' : 'none';
-    });
-  });
-
-  // Close modal when clicking outside
-  const modal = document.getElementById('bookingModal');
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      closeModal();
-    }
-  });
-
-  // Format card input
-  const cardNumber = document.getElementById('cardNumber');
-  if (cardNumber) {
-    cardNumber.addEventListener('input', (e) => {
-      let value = e.target.value.replace(/\D/g, '');
-      value = value.replace(/(.{4})/g, '$1 ').trim();
-      e.target.value = value.substring(0, 19);
-    });
-  }
-
-  // Format expiry date
-  const expiry = document.getElementById('expiry');
-  if (expiry) {
-    expiry.addEventListener('input', (e) => {
-      let value = e.target.value.replace(/\D/g, '');
-      if (value.length >= 2) {
-        value = value.substring(0, 2) + '/' + value.substring(2);
-      }
-      e.target.value = value.substring(0, 5);
-    });
-  }
-
-  // Format CVV
-  const cvv = document.getElementById('cvv');
-  if (cvv) {
-    cvv.addEventListener('input', (e) => {
-      e.target.value = e.target.value.replace(/\D/g, '').substring(0, 3);
-    });
-  }
-
-  // Format M-PESA number
-  const phone = document.getElementById('phone');
-  if (phone) {
-    phone.addEventListener('input', (e) => {
-      let value = e.target.value.replace(/\D/g, '');
-      if (!value.startsWith('254')) {
-        value = '254' + value;
-      }
-      e.target.value = value.substring(0, 12);
-    });
+  if (token && currentUser) {
+    authLinks.forEach(el => el.style.display = "none");
+    userLinks.forEach(el => el.style.display = "block");
+    document.getElementById("navUsername").textContent = currentUser.username;
+  } else {
+    authLinks.forEach(el => el.style.display = "inline-block");
+    userLinks.forEach(el => el.style.display = "none");
   }
 }
 
-/* UI TOGGLES */
 function showLogin() {
   document.getElementById("auth").style.display = "block";
   document.getElementById("login").style.display = "block";
@@ -240,16 +120,6 @@ function showRegister() {
   document.getElementById("register").style.display = "block";
 }
 
-
-function showDashboard() {
-  document.getElementById("auth").style.display = "none";
-  document.getElementById("dashboard").style.display = "block";
-  document.getElementById("admin").style.display = "none";
-  document.getElementById("userDisplay").textContent = currentUser.username;
-  getMyBookings();
-  document.querySelector("main").style.display = "block"; // Ensure main content is visible
-}
-
 function logout() {
   token = null;
   currentUser = null;
@@ -259,18 +129,14 @@ function logout() {
   updateAuthStatus();
 }
 
-/* AUTH */
+/* ------------------ REGISTER ------------------ */
 async function handleRegister(e) {
   e.preventDefault();
-  const submitBtn = e.target.querySelector('button');
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Registering...';
-
   const email = document.getElementById("reg-email").value.trim();
   const username = document.getElementById("reg-username").value.trim();
   const password = document.getElementById("reg-password").value;
   const confirm = document.getElementById("reg-confirm").value;
-  if (password !== confirm) return alert("Passwords do not match");
+  if (password !== confirm) return showToast("Passwords do not match", "error");
 
   try {
     const res = await fetch(`${API_BASE}/register`, {
@@ -278,70 +144,52 @@ async function handleRegister(e) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, username, password })
     });
-    const j = await res.json();
-    if (!res.ok) {
-        throw new Error(j.error || "Registration failed");
-    }
-    showToast("Registered — please log in", "success");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Registration failed");
+    showToast("Registered successfully! Please log in.", "success");
     showLogin();
   } catch (err) {
-    console.error(err);
-    showToast(err.message || "Network error during registration", "error");
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Register';
+    showToast(err.message, "error");
   }
 }
 
+/* ------------------ LOGIN ------------------ */
 async function handleLogin(e) {
   e.preventDefault();
-  const submitBtn = e.target.querySelector('button');
   const usernameOrEmail = document.getElementById("login-username").value.trim();
   const password = document.getElementById("login-password").value;
 
-  if (!usernameOrEmail || !password) {
-    showToast('Please fill in all fields', 'error');
-    return;
-  }
-
   try {
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Logging in...';
-
     const res = await fetch(`${API_BASE}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ usernameOrEmail, password })
     });
-    const j = await res.json();
-    
-    if (!res.ok) {
-      showToast(j.error || "Login failed", 'error');
-      return;
-    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Login failed");
 
-    token = j.token;
-    currentUser = j.user;
+    token = data.token;
+    currentUser = data.user;
     localStorage.setItem("gc_token", token);
     localStorage.setItem("gc_user", JSON.stringify(currentUser));
-    
-    showToast('Login successful!', 'success');
-    
-    if (currentUser.role === "admin") {
-      showAdmin();
-    } else {
-      showDashboard();
-    }
+
+    showToast("Login successful!", "success");
+    currentUser.role === "admin" ? showAdmin() : showDashboard();
   } catch (err) {
-    console.error(err);
-    showToast('Network error during login', 'error');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Login';
+    showToast(err.message, "error");
   }
 }
 
-/* FETCH CONTENT */
+/* ------------------ DASHBOARD ------------------ */
+function showDashboard() {
+  document.getElementById("auth").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
+  document.getElementById("admin").style.display = "none";
+  document.getElementById("userDisplay").textContent = currentUser.username;
+  getMyBookings();
+}
+
+/* ------------------ FETCH DATA ------------------ */
 async function fetchAllSections() {
   await Promise.all([fetchMovies(), fetchConcerts(), fetchPlays()]);
 }
@@ -351,17 +199,21 @@ async function fetchMovies() {
     const res = await fetch(`${API_BASE}/movies`);
     const data = await res.json();
     allMedia.movies = data;
-    renderSection("movies", data, "Movie");
-  } catch (err) { console.error(err); }
+    renderSection("movies-section", data, "Movie");
+  } catch (err) {
+    console.error("Movies fetch error:", err);
+  }
 }
 
 async function fetchConcerts() {
   try {
-    const res = await fetch(`${API_BASE}/concerts`);
+    const res = await fetch(`${API_BASE}/events`);
     const data = await res.json();
     allMedia.concerts = data;
-    renderSection("concerts", data, "Concert");
-  } catch (err) { console.error(err); }
+    renderSection("concerts-section", data, "Concert");
+  } catch (err) {
+    console.error("Concerts fetch error:", err);
+  }
 }
 
 async function fetchPlays() {
@@ -369,338 +221,111 @@ async function fetchPlays() {
     const res = await fetch(`${API_BASE}/plays`);
     const data = await res.json();
     allMedia.plays = data;
-    renderSection("plays", data, "Play");
-  } catch (err) { console.error(err); }
+    renderSection("plays-section", data, "Play");
+  } catch (err) {
+    console.error("Plays fetch error:", err);
+  }
 }
 
-/* RENDER */
-function renderSection(containerId, items, type) {
-  const container = document.getElementById(containerId);
-  container.innerHTML = items.map(i => `
+/* ------------------ RENDER ------------------ */
+function renderSection(id, items, type) {
+  const container = document.querySelector(`#${id} .media-grid`);
+  if (!container) return;
+  container.innerHTML = (items || []).map(i => `
     <div class="card">
-      <img src="${i.poster || 'placeholder.jpg'}" alt="${i.title}" />
+      <img src="${i.poster || 'images/default-movie.jpg'}" alt="${i.title}" />
       <h4>${i.title}</h4>
-      <p><small>${type}</small></p>
       <p>${i.description || ""}</p>
-      <p><small>Duration: ${i.duration || "—"} min</small></p>
-      <button onclick='bookPrompt(${i.id}, "${escapeJs(i.title)}")'>Book</button>
+      <p><small>${type}</small></p>
+      <button onclick="showBookingModal('${i.title}', '${type.toLowerCase()}')">Book Now</button>
     </div>
   `).join("");
 }
 
-function escapeJs(s) { return s.replace(/"/g, '\\"'); }
-
-/* BOOKINGS with seat selection + M-Pesa */
-async function bookPrompt(id, title, category) {
-  if (!token) { 
-    showToast("Please login to book", "info"); 
-    showLogin(); 
-    return; 
+/* ------------------ BOOKINGS ------------------ */
+function showBookingModal(title, category) {
+  if (!token) {
+    showToast("Please log in to book", "error");
+    showLogin();
+    return;
   }
 
-  // Show booking modal
+  currentBooking = { title, category, prices: PRICES[category] };
   const modal = document.getElementById("bookingModal");
   const eventDetails = document.getElementById("eventDetails");
-  modal.style.display = "block";
+  const prices = PRICES[category];
 
-  // Set event details and prices based on category
-  let prices;
-  switch (category) {
-    case 'movie':
-      prices = { vvip: 5000, vip: 3000, regular: 1500 };
-      break;
-    case 'concert':
-      prices = { vvip: 8000, vip: 5000, regular: 2500 };
-      break;
-    case 'play':
-      prices = { vvip: 6000, vip: 4000, regular: 2000 };
-      break;
-    default:
-      prices = { vvip: 5000, vip: 3000, regular: 1500 };
-  }
-
-  eventDetails.innerHTML = `
-    <h3>${title}</h3>
-    <p>Event Type: ${category.charAt(0).toUpperCase() + category.slice(1)}</p>
-  `;
-
-  // Update radio buttons with correct prices
+  eventDetails.innerHTML = `<h3>${title}</h3><p>${category.toUpperCase()}</p>`;
   document.querySelector('label[for="vvip"]').textContent = `VVIP - KES ${prices.vvip}`;
   document.querySelector('label[for="vip"]').textContent = `VIP - KES ${prices.vip}`;
   document.querySelector('label[for="regular"]').textContent = `Regular - KES ${prices.regular}`;
 
-  // Store event info and prices for later use
-  modal.dataset.eventId = id;
-  modal.dataset.eventTitle = title;
-  modal.dataset.eventType = category;
-  modal.dataset.prices = JSON.stringify(prices);
-
-  // Reset form
-  document.querySelectorAll('input[name="seatCategory"]').forEach(input => input.checked = false);
-  document.querySelectorAll('input[name="paymentMethod"]').forEach(input => input.checked = false);
-  document.getElementById('quantity').value = "1";
-  document.getElementById('totalAmount').textContent = "KES 0";
-  document.getElementById('mpesaForm').style.display = "none";
-  document.getElementById('cardForm').style.display = "none";
-}
-
-/* BOOKINGS */
-function showBookingModal(title, category) {
-    if (!token) {
-        showToast("Please login first", "error");
-        showLogin();
-        return;
-    }
-
-    const prices = PRICES[category];
-    currentBooking = { title, category, prices };
-    
-    // Update modal content
-    const modal = document.getElementById('bookingModal');
-    const eventDetails = document.getElementById('eventDetails');
-    
-    eventDetails.innerHTML = `
-        <h3>${title}</h3>
-        <p>Event Type: ${category.charAt(0).toUpperCase() + category.slice(1)}</p>
-    `;
-
-    // Update price labels
-    document.querySelector('label[for="vvip"]').textContent = `VVIP - KES ${prices.vvip}`;
-    document.querySelector('label[for="vip"]').textContent = `VIP - KES ${prices.vip}`;
-    document.querySelector('label[for="regular"]').textContent = `Regular - KES ${prices.regular}`;
-
-    // Reset form
-    document.querySelectorAll('input[name="seatCategory"]').forEach(input => input.checked = false);
-    document.querySelectorAll('input[name="paymentMethod"]').forEach(input => input.checked = false);
-    document.getElementById('quantity').value = "1";
-    document.getElementById('totalAmount').textContent = "KES 0";
-    document.getElementById('mpesaForm').style.display = "none";
-    document.getElementById('cardForm').style.display = "none";
-
-    // Show modal
-    modal.style.display = "block";
+  document.getElementById("quantity").value = 1;
+  document.getElementById("totalAmount").textContent = "KES 0";
+  modal.style.display = "block";
 }
 
 function updateTotal() {
-    try {
-        if (!currentBooking) return;
-    
-        const selectedCategory = document.querySelector('input[name="seatCategory"]:checked');
-        const quantity = parseInt(document.getElementById('quantity').value) || 0;
-    
-        if (selectedCategory && quantity > 0) {
-            const price = currentBooking.prices[selectedCategory.value];
-            const total = price * quantity;
-            document.getElementById('totalAmount').textContent = `KES ${total}`;
-        } else {
-            document.getElementById('totalAmount').textContent = 'KES 0';
-        }
-    } catch (error) {
-        console.error("Error updating total:", error);
-        showToast("Could not update total amount.", "error");
-    }
+  if (!currentBooking) return;
+  const seat = document.querySelector('input[name="seatCategory"]:checked');
+  const qty = parseInt(document.getElementById("quantity").value) || 0;
+  const total = seat ? currentBooking.prices[seat.value] * qty : 0;
+  document.getElementById("totalAmount").textContent = `KES ${total}`;
 }
 
 function closeModal() {
-    const modal = document.getElementById('bookingModal');
-    modal.style.display = "none";
-    currentBooking = null;
+  document.getElementById("bookingModal").style.display = "none";
+  currentBooking = null;
 }
 
+/* ------------------ PAYMENT ------------------ */
+async function processPayment() {
+  if (!token || !currentBooking) return showToast("Login to complete booking", "error");
+
+  const seat = document.querySelector('input[name="seatCategory"]:checked');
+  const qty = parseInt(document.getElementById("quantity").value);
+  const payMethod = document.querySelector('input[name="paymentMethod"]:checked');
+  if (!seat || !payMethod) return showToast("Select category and payment method", "error");
+
+  const total = currentBooking.prices[seat.value] * qty;
+  showToast("Processing payment...", "info");
+
+  try {
+    await fetch(`${API_BASE}/bookings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ title: currentBooking.title, category: seat.value, quantity: qty, amount: total })
+    });
+    showToast("Payment successful!", "success");
+    closeModal();
+    getMyBookings();
+  } catch {
+    showToast("Payment failed", "error");
+  }
+}
+
+/* ------------------ BOOKINGS LIST ------------------ */
 async function getMyBookings() {
   if (!token) return;
   try {
-    const res = await fetch(`${API_BASE}/my-bookings`, { 
-      headers: { Authorization: `Bearer ${token}` } 
-    });
+    const res = await fetch(`${API_BASE}/my-bookings`, { headers: { Authorization: `Bearer ${token}` } });
     const data = await res.json();
-    
-    const container = document.getElementById("userBookings");
-    if (!data.length) {
-      container.innerHTML = "<p>No bookings found.</p>";
-      return;
-    }
-    
-    container.innerHTML = data.map(booking => `
-      <div class="booking-card">
-        <h4>${booking.eventTitle || booking.movie_title}</h4>
-        <p>Type: ${booking.eventType || 'Movie'}</p>
-        <p>Category: ${booking.category || 'Regular'}</p>
-        <p>Quantity: ${booking.quantity || booking.seats.length}</p>
-        <p>Amount: KES ${booking.amount || booking.seats.length * 1500}</p>
-        <p>Status: ${booking.status || 'Completed'}</p>
-        <p>Booked on: ${new Date(booking.created_at).toLocaleDateString()}</p>
-        <button onclick="downloadTicket(${JSON.stringify(booking)})">Download Ticket</button>
-      </div>
-    `).join('');
-  } catch (err) { 
-    console.error(err); 
+    document.getElementById("userBookings").innerHTML =
+      data.length === 0
+        ? "<p>No bookings found.</p>"
+        : data.map(b => `<div><h4>${b.eventTitle}</h4><p>${b.category}</p><p>KES ${b.amount}</p></div>`).join("");
+  } catch {
     showToast("Failed to load bookings", "error");
   }
 }
 
-async function processPayment() {
-    if (!token || !currentBooking) {
-        showToast("Please login to complete booking", "error");
-        return;
-    }
-
-    const modal = document.getElementById('bookingModal');
-    const selectedCategory = document.querySelector('input[name="seatCategory"]:checked');
-    const quantity = parseInt(document.getElementById('quantity').value);
-    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
-
-  if (!selectedCategory) {
-    showToast("Please select a seating category.", "error");
-    return;
-  }
-
-  if (!paymentMethod) {
-    showToast("Please select a payment method", "error");
-    return;
-  }
-
-  const eventId = modal.dataset.eventId;
-  const eventTitle = modal.dataset.eventTitle;
-  const eventType = modal.dataset.eventType;
-  const prices = JSON.parse(modal.dataset.prices);
-  const totalAmount = prices[selectedCategory.value] * quantity;
-
-  try {
-    let paymentData;
-    if (paymentMethod.value === 'mpesa') {
-      const phone = document.getElementById('phone').value.trim();
-      if (!/^254[0-9]{9}$/.test(phone)) {
-        showToast("Please enter a valid M-PESA number (254XXXXXXXXX)", "error");
-        return;
-      }
-      paymentData = { phone, amount: totalAmount };
-    } else {
-      const cardNumber = document.getElementById('cardNumber').value.trim();
-      const expiry = document.getElementById('expiry').value.trim();
-      const cvv = document.getElementById('cvv').value.trim();
-      
-      if (!cardNumber || !expiry || !cvv) {
-        showToast("Please fill in all card details", "error");
-        return;
-      }
-      paymentData = { cardNumber, expiry, cvv, amount: totalAmount };
-    }
-
-    // Create booking
-    const bookingRes = await fetch(`${API_BASE}/bookings`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        eventId,
-        eventTitle,
-        eventType,
-        category: selectedCategory.value,
-        quantity,
-        amount: totalAmount,
-        paymentMethod: paymentMethod.value,
-      })
-    });
-
-    const bookingData = await bookingRes.json();
-    if (!bookingRes.ok) throw new Error(bookingData.error);
-
-    // Process payment
-    const payRes = await fetch(`${API_BASE}/payments`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        ...paymentData,
-        bookingId: bookingData.bookingId
-      })
-    });
-
-    const payData = await payRes.json();
-    if (!payRes.ok) throw new Error(payData.error);
-
-    showToast(
-      paymentMethod.value === 'mpesa' 
-        ? "M-PESA prompt sent. Complete payment on your phone." 
-        : "Payment successful!",
-      "success"
-    );
-    closeModal();
-    getMyBookings(); // Refresh bookings
-
-  } catch (err) {
-    showToast(err.message || "Payment failed. Please try again.", "error");
-  }
-}
-
-/* TICKET PDF */
-function downloadTicket(booking) {
-  try {
-    const ticketHtml = `
-      <div id="ticket" style="padding: 20px; background: #1a1a1a; color: #fff; border-radius: 8px; max-width: 400px; margin: 0 auto;">
-        <h2 style="color: gold; text-align: center;">🎟 Gold Cinema Ticket</h2>
-        <div style="border: 1px solid gold; padding: 15px; border-radius: 4px;">
-          <p><b style="color: gold;">Event:</b> ${booking.eventTitle || booking.movie_title}</p>
-          <p><b style="color: gold;">Type:</b> ${booking.eventType || 'Movie'}</p>
-          <p><b style="color: gold;">Category:</b> ${booking.category || 'Regular'}</p>
-          ${booking.seats ? `<p><b style="color: gold;">Seats:</b> ${booking.seats.join(", ")}</p>` : ''}
-          ${booking.quantity ? `<p><b style="color: gold;">Tickets:</b> ${booking.quantity}</p>` : ''}
-          <p><b style="color: gold;">Amount:</b> KES ${booking.amount || (booking.seats ? booking.seats.length * 1500 : 0)}</p>
-          <p><b style="color: gold;">Date:</b> ${new Date(booking.created_at).toLocaleString()}</p>
-          <p><b style="color: gold;">Customer:</b> ${currentUser.username}</p>
-          <p style="text-align: center; margin-top: 20px; font-size: 0.8em;">
-            Thank you for choosing Gold Cinema!<br>
-            <span style="color: gold;">✨ Enjoy the show! ✨</span>
-          </p>
-        </div>
-      </div>
-    `;
-
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = ticketHtml;
-    document.body.appendChild(tempDiv);
-
-    html2pdf()
-      .from(tempDiv.firstChild)
-      .save(`gold-cinema-ticket-${Date.now()}.pdf`)
-      .then(() => {
-        document.body.removeChild(tempDiv);
-      });
-  } catch (error) {
-      console.error("Error generating ticket PDF:", error);
-      showToast("Could not download ticket.", "error");
-  }
-}
-
-/* NOTIFICATIONS */
-function showToast(message, type = 'info') {
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.textContent = message;
-  
-  document.body.appendChild(toast);
-  
-  // Trigger animation
-  setTimeout(() => toast.classList.add('show'), 10);
-  
-  // Remove after display
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
-}
-
-/* ADMIN */
+/* ------------------ ADMIN ------------------ */
 async function showAdmin() {
   document.getElementById("auth").style.display = "none";
   document.getElementById("dashboard").style.display = "none";
   document.getElementById("admin").style.display = "block";
   document.getElementById("userDisplay").textContent = currentUser.username;
+
   try {
     const [usersRes, bookingsRes] = await Promise.all([
       fetch(`${API_BASE}/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -709,55 +334,41 @@ async function showAdmin() {
     const users = await usersRes.json();
     const bookings = await bookingsRes.json();
 
-    // Update report counts
     document.getElementById("totalUsersCount").textContent = users.length;
     document.getElementById("totalBookingsCount").textContent = bookings.length;
-
-    // Populate tables
-    document.getElementById("allCustomers").innerHTML = users.map(u =>
-      `<p>${u.username} (${u.email}) [${u.role}]</p>`).join("");
-    document.getElementById("allBookings").innerHTML = bookings.map(b =>
-      `<p>${b.movie_title} — ${b.username} (${b.email}) — seats:${b.seats.join(", ")} — ${new Date(b.created_at).toLocaleString()}</p>`
-    ).join("");
-  } catch (err) {
-      console.error(err);
-      showToast("Failed to load admin data", "error");
+  } catch {
+    showToast("Admin data failed to load", "error");
   }
 }
 
-async function handleAddMedia(e) {
-  e.preventDefault();
-  const title = document.getElementById("media-title").value;
-  const category = document.getElementById("media-category").value;
-  const description = document.getElementById("media-description").value;
-  const poster = document.getElementById("media-poster").value;
-  const duration = document.getElementById("media-duration").value;
+/* ------------------ TOAST ------------------ */
+function showToast(message, type = "info") {
+  const t = document.createElement("div");
+  t.className = `toast toast-${type}`;
+  t.textContent = message;
+  document.body.appendChild(t);
+  setTimeout(() => t.classList.add("show"), 10);
+  setTimeout(() => {
+    t.classList.remove("show");
+    setTimeout(() => t.remove(), 300);
+  }, 3000);
+}
+function showLoader() {
+  document.getElementById("loaderOverlay").style.display = "flex";
+}
 
-  const mediaData = { title, category, description, poster, duration: parseInt(duration) || null };
-
+function hideLoader() {
+  document.getElementById("loaderOverlay").style.display = "none";
+}
+async function fetchMovies() {
+  showLoader();
   try {
-    const res = await fetch(`${API_BASE}/admin/media`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(mediaData)
-    });
-
-    const result = await res.json();
-
-    if (!res.ok) {
-      throw new Error(result.error || "Failed to add media");
-    }
-
-    showToast("Media added successfully!", "success");
-    document.getElementById("addMediaForm").reset();
-    // Optionally, refresh the media lists on the main page
-    fetchAllSections();
-  } catch (err) {
-    console.error(err);
-    showToast(err.message, "error");
+    const res = await fetch(`${API_BASE}/movies`);
+    const data = await res.json();
+    renderSection("movies-section", data, "Movie");
+  } catch (e) {
+    console.error(e);
+  } finally {
+    hideLoader();
   }
 }
-// End of script.js

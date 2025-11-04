@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gold Cinema - Movie Booking</title>
-    <link rel="stylesheet" href="css/style.css">
+      <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -173,6 +173,26 @@
         </div>
     </footer>
 
+      <script src="js/data.js"></script>
     <script src="js/script.js"></script>
+    <script>
+        // Initialize the application with sample data
+        document.addEventListener('DOMContentLoaded', () => {
+            // Display sample movies
+            const movieGrid = document.querySelector('#movies .movie-grid');
+            movieGrid.innerHTML = sampleMovies.map(movie => `
+                <div class="movie-card" onclick="showMovieDetails(${movie.id})">
+                    <img src="${movie.poster}" alt="${movie.title}" onerror="this.src='images/default-movie.jpg'">
+                    <div class="movie-card-info">
+                        <h3 class="movie-card-title">${movie.title}</h3>
+                        <div class="movie-card-meta">
+                            <span><i class="fas fa-star"></i> ${movie.rating}</span>
+                            <span><i class="fas fa-clock"></i> ${movie.duration} min</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        });
+    </script>
 </body>
 </html>
